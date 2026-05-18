@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { MessageSquarePlus, DollarSign, Pencil } from "lucide-react";
+import { MessageSquarePlus, DollarSign, Pencil, Mail } from "lucide-react";
 import { Modal } from "@/components/Modal";
 import { LogContactForm } from "@/components/forms/LogContactForm";
 import { AddDonationForm } from "@/components/forms/AddDonationForm";
 import { PersonForm } from "@/components/forms/PersonForm";
+import { SendEmailForm } from "@/components/forms/SendEmailForm";
 import type { Person } from "@/generated/prisma";
 
 export function PersonActions({
@@ -19,7 +20,7 @@ export function PersonActions({
   campaigns: { id: string; name: string }[];
   isDonor: boolean;
 }) {
-  const [open, setOpen] = useState<"contact" | "donation" | "edit" | null>(null);
+  const [open, setOpen] = useState<"contact" | "donation" | "edit" | "email" | null>(null);
   const close = () => setOpen(null);
 
   return (
@@ -32,6 +33,16 @@ export function PersonActions({
         <MessageSquarePlus className="h-3.5 w-3.5" />
         Log contact
       </button>
+      {person.email && (
+        <button
+          type="button"
+          onClick={() => setOpen("email")}
+          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-muted"
+        >
+          <Mail className="h-3.5 w-3.5" />
+          Send email
+        </button>
+      )}
       <button
         type="button"
         onClick={() => setOpen("donation")}
@@ -67,6 +78,23 @@ export function PersonActions({
         size="md"
       >
         <AddDonationForm personId={person.id} campaigns={campaigns} onSuccess={close} />
+      </Modal>
+
+      <Modal
+        open={open === "email"}
+        onClose={close}
+        title="Send email"
+        description={person.email ? `to ${person.email}` : ""}
+        size="lg"
+      >
+        {person.email && (
+          <SendEmailForm
+            personId={person.id}
+            to={person.email}
+            defaultSubject={`Following up — ${person.firstName} ${person.lastName}`}
+            onSuccess={close}
+          />
+        )}
       </Modal>
 
       <Modal
