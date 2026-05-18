@@ -65,9 +65,11 @@ sign in as a different seeded user.
 | 2.5 | ✅ done | User + Center admin UI |
 | 3 | ✅ done | Stripe online giving (one-time + monthly, ACH, cover-fees) |
 | 4 | ✅ done | Email send + log via Resend (shared sender) |
-| 3.5 | later | Donor self-service portal |
-| 4.5 | later | Per-user Outlook/Gmail OAuth + inbound auto-log |
-| 5 | later | Scheduled automations |
+| 3.5 | ✅ done | Donor self-service portal (magic-link auth + Stripe Customer Portal) |
+| 4.5 | ✅ done | Per-user Outlook OAuth (send as me); Gmail pending in 4.6 |
+| 5 | ✅ done | Scheduled cron: weekly digest + monthly lapsed-donor email |
+| 4.6 | later | Gmail OAuth equivalent of 4.5 |
+| 4.7 | later | Inbound auto-log of email replies via Graph subscriptions |
 
 ## Auth0
 
@@ -106,6 +108,39 @@ When `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are set:
 Without those env vars, the donation page renders an "Online giving
 isn't live yet" notice. Gifts can still be entered manually from the
 staff app.
+
+## Donor portal
+
+`/portal/request` accepts an email and sends a magic-link sign-in via
+Resend (or surfaces the link inline in dev). One-hour token, 30-day
+session cookie. `/portal` shows lifetime/YTD/gift history; donors who
+have an online gift on file get a button that hands off to the
+Stripe-hosted Customer Portal for card / subscription management.
+
+## Per-user mail integration
+
+Settings → Email integrations lets each staff member connect their
+Outlook account once. When connected, the "Send email" composer routes
+through Microsoft Graph (`/me/sendMail`), so the email comes from their
+address and replies land in their inbox. Access tokens refresh
+automatically before each send. Without a connection, the composer
+falls back to the shared Resend account.
+
+## Scheduled emails
+
+Two cron jobs (Railway-managed via `railway.toml`):
+
+- **`/api/cron/weekly-digest`** — Monday 9 AM ET. For every active
+  user, builds a list of the 10 people in their accessible centers who
+  most need a touch (any non-green alert, sorted by lifetime giving)
+  and sends a plain-text email with deep links to each profile.
+- **`/api/cron/lapsed-donors`** — 1st of the month at 10 AM ET. Per
+  organization, emails the top 25 lapsed donors (12+ months no gift or
+  status=Lapsed) to every org admin.
+
+Both routes require `Bearer ${CRON_SECRET}` in production; without the
+env var they're open for dev access. Uses Resend; when unconfigured,
+the cron logs to console and returns a skipped count instead.
 
 ## Bloomerang import
 
