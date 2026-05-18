@@ -143,9 +143,17 @@ dashboard useful. Replicate it server-side and compute it on every read:
 | Orange | 180–365 days | 30–60 days |
 | Red | > 365 days | > 60 days |
 
-Thresholds configurable per center in Settings (every center has different
-rhythms — a Major Donor's threshold should be tighter than a Lapsed
-donor's). Stored on `Center.alertThresholds` as JSON.
+Thresholds configurable in Settings (every center has different rhythms
+— a Major Donor's threshold should be tighter than a Lapsed donor's).
+Stored as JSON on two levels:
+
+- `Organization.defaultAlertThresholds` — set by **org_admin** (HQ),
+  applies to every center that hasn't overridden.
+- `Center.alertThresholds` — set by **center director** for their own
+  center, overrides the org default.
+- **Staff** can see thresholds but not edit them.
+
+Same pattern holy-insights uses for church-admin vs. campus-admin.
 
 The dashboard, follow-up queue, and "Donors Needing Attention" widget all
 key off this single computation.
@@ -227,7 +235,9 @@ A few specific reports up front:
 All reports export to CSV/PDF; some embed a Recharts chart.
 
 ### `/give/[centerSlug]` — public donation page (no auth)
-Branded per center. See section 8.
+Branded per center. Lives on `tcindiana.org/give/[centerSlug]` as a
+subpath (not a separate domain) — keeps the main TC Indiana site's
+SEO and branding. See section 8.
 
 ### `/portal` — donor portal (donor auth, separate from staff)
 See section 8.
@@ -299,12 +309,24 @@ platform. Replacing that piece is half the value of this project.
   recurring, switch fund
 
 ### Stripe Connect vs single account?
-Two options, decide later: a single Stripe account for TC Indiana with
-fund-based reporting (simpler, all centers share), **or** Stripe Connect
-where each center is a connected account (each center sees its own
-Stripe dashboard, payouts route directly). Recommend starting with a
-single account and only moving to Connect if a center asks for direct
-payouts.
+Two options, decide after discovery: a single Stripe account for TC
+Indiana with fund-based reporting (simpler, all centers share), **or**
+Stripe Connect where each center is a connected account (each center
+sees its own Stripe dashboard, payouts route directly).
+
+**Discovery needed:** what does TC Indiana use for payment processing
+today? (May be Bloomerang's built-in, may be a separate Stripe/Square
+account, may be paper-only.) Three things to find out before Phase 3:
+
+1. Current processor + monthly volume — affects fee negotiation
+2. How recurring donors are billed today — those subscriptions need to
+   migrate without re-asking each donor for their card
+3. Whether each center has its own bank account or they all share one
+   — single shared bank = single Stripe account is fine; separate bank
+   accounts = Connect is worth the complexity
+
+Recommend starting with a single account and only moving to Connect if
+discovery surfaces separate bank accounts per center.
 
 ### Fees and reporting
 Show staff:
@@ -405,19 +427,48 @@ one drilldown table, CSV/PDF export.
   sent to her assigned staff on Monday mornings)
 - Segmentation / saved views
 
-## 13. Open questions to resolve before Phase 1 ships
+## 13. Build philosophy: plan wide, build narrow
 
-- Do centers each get their own Stripe account (Connect) or share one?
-- Will donors authenticate to the portal via magic link, Google, both?
-- Per-center alert thresholds — does HQ override, or is it center-set?
-- Are there any data fields the spreadsheet doesn't show that you also
-  track in Bloomerang today (e.g. spouse, mailing-vs-physical address,
-  household giving)?
-- Does TC Indiana want the public donation pages to live on
-  `tcindiana.org` (subpath routing / reverse proxy) or on a separate
-  domain?
+The data model and page list in this doc are intentionally complete —
+all the way through online giving, donor portal, and reports — because
+shaping the schema correctly on day one is cheap, and reshaping it after
+six months of production data is expensive.
 
-## 14. Out of scope (for now)
+What we **build** at any given time is just the current phase. Phase 1
+ships before anyone touches Stripe code. The unbuilt tables stay in the
+schema as `// Phase 3` or `// Phase 4` comments so the migration path is
+already known but no work is wasted on features staff haven't asked for.
+
+Practical rule: only build a feature once a current user is blocked
+without it. Until then, the value is in the plan, not in the code.
+
+## 14. Resolved decisions
+
+- ✅ **Donation page URL**: subpath on `tcindiana.org/give/[centerSlug]`,
+  not a separate domain
+- ✅ **Alert threshold ownership**: HQ (org_admin) sets org defaults;
+  center directors override for their own center; staff read-only
+- ✅ **Roles model**: HQ-controlled + center-leader override pattern,
+  mirroring holy-insights' church-admin / campus-admin split
+
+## 15. Open questions to resolve
+
+**Before Phase 3 (online giving):**
+- What payment processor does TC Indiana use today? (Discovery item —
+  needed to plan recurring-donor migration without re-asking each
+  donor for a card.)
+- Do centers share a bank account or have separate ones? (Drives
+  Stripe single-account vs. Connect.)
+- Donor portal auth: magic link, Google, or both?
+
+**Before Phase 2 (Bloomerang import):**
+- Beyond the spreadsheet's fields, what does TC track in Bloomerang
+  today? Specifically: spouse / household giving, separate mailing vs.
+  physical addresses, soft credits, board / committee membership,
+  custom tags. (Discovery item with whichever staff member runs
+  Bloomerang today.)
+
+## 16. Out of scope (for now)
 
 - Event ticketing / event RSVP (Bloomerang has it; not in the
   spreadsheet)
