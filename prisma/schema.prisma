@@ -166,6 +166,10 @@ model Person {
   // Phase 2 (Bloomerang import) — for idempotent re-runs
   bloomerangId String? @unique @map("bloomerang_id")
 
+  // Phase 3 (Stripe online giving) — set on first online gift so
+  // subsequent recurring charges can attach to the same Stripe customer.
+  stripeCustomerId String? @unique @map("stripe_customer_id")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

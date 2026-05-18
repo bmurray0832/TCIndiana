@@ -60,11 +60,14 @@ sign in as a different seeded user.
 | 0 | ✅ done | Bootstrap, schema, seed, read-only pages |
 | 0.5 | ✅ done | Auth0 with dev-mode fallback |
 | 1 | ✅ done | Write paths: log contact, add donation, add/edit person; Monthly Report |
-| 1.5 | ✅ done | Follow-up snooze, Campaign Performance, Biggest Supporters, Retention reports |
+| 1.5 | ✅ done | Follow-up snooze, Campaign Performance, Biggest Supporters, Retention, Pipeline Funnel, YoY by Center reports |
 | 2 | ✅ done | Bloomerang CSV importer (Constituents / Transactions / Interactions) |
-| 3 | later | Stripe online giving + donor portal |
-| 4 | later | Outlook + Gmail email-send/log |
-| 5 | later | Automations |
+| 2.5 | ✅ done | User + Center admin UI |
+| 3 | ✅ done | Stripe online giving (one-time + monthly, ACH, cover-fees) |
+| 4 | ✅ done | Email send + log via Resend (shared sender) |
+| 3.5 | later | Donor self-service portal |
+| 4.5 | later | Per-user Outlook/Gmail OAuth + inbound auto-log |
+| 5 | later | Scheduled automations |
 
 ## Auth0
 
@@ -82,6 +85,27 @@ must create them.
 When Auth0 env vars are unset and `NODE_ENV !== "production"`, the app
 falls back to the dev shim (`DEV_USER_EMAIL`). In production with Auth0
 unset, `getCurrentUser()` returns null and the app refuses to serve.
+
+## Online giving
+
+When `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are set:
+
+- `/give` — public landing, picks a center
+- `/give/[centerSlug]` — branded per-center donation page with preset
+  amounts, custom amount, one-time / monthly, fund selector, tribute
+  field, and a "cover the processing fee" toggle
+- Submits to `/api/give/checkout` which creates a Stripe Checkout
+  Session (card + ACH) and redirects the donor to Stripe-hosted payment
+- Webhook at `/api/stripe/webhook` handles `checkout.session.completed`
+  (one-time), `invoice.payment_succeeded` (recurring), `charge.refunded`
+- On success: match Person by email + center → create Donation
+  (`source=STRIPE`) → log a Contact (`outcome=MADE_DONATION`) → run
+  `recomputePerson()`. Donors created from online gifts get
+  `source=ONLINE` and `convertedToDonorAt=now`.
+
+Without those env vars, the donation page renders an "Online giving
+isn't live yet" notice. Gifts can still be entered manually from the
+staff app.
 
 ## Bloomerang import
 
