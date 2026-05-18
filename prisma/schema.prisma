@@ -1,0 +1,424 @@
+// TCIndiana CRM — Bloomerang replacement
+// See docs/PLAN.md for the rationale behind this schema.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ORG + CENTERS + USERS ───────────────────────────────────────────
+
+model Organization {
+  id   String @id @default(cuid())
+  name String
+  slug String @unique
+
+  // HQ-set defaults for the Green/Yellow/Orange/Red alert engine.
+  // Center directors may override per center.
+  // JSON shape: { donor: { yellow: 90, orange: 180, red: 365 },
+  //               prospect: { yellow: 14, orange: 30, red: 60 } }
+  defaultAlertThresholds Json @default("{\"donor\":{\"yellow\":90,\"orange\":180,\"red\":365},\"prospect\":{\"yellow\":14,\"orange\":30,\"red\":60}}") @map("default_alert_thresholds")
+
+  centers   Center[]
+  users     User[]
+  campaigns Campaign[]
+  auditLog  AuditLog[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("organizations")
+}
+
+model Center {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name             String
+  slug             String  @unique
+  donationPageSlug String? @unique @map("donation_page_slug")
+  brandColor       String? @map("brand_color")
+  brandLogoUrl     String? @map("brand_logo_url")
+  address          String?
+
+  // Optional override of organization-level thresholds. Same JSON shape.
+  alertThresholds Json? @map("alert_thresholds")
+
+  // Phase 3 (online giving)
+  // stripeAccountId String? @map("stripe_account_id") // Stripe Connect, if used
+
+  people        Person[]
+  contacts      Contact[]
+  donations     Donation[]
+  campaigns     Campaign[]
+  followUps     FollowUp[]
+  userRoles     UserCenterRole[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([organizationId])
+  @@map("centers")
+}
+
+model User {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  email      String  @unique
+  name       String
+  // org-wide role. Center-level access lives on UserCenterRole.
+  orgRole    OrgRole @default(STAFF) @map("org_role")
+  active     Boolean @default(true)
+
+  // Phase 4 (email send + log)
+  // msGraphTokens Json? @map("ms_graph_tokens")
+  // gmailTokens   Json? @map("gmail_tokens")
+
+  centerRoles    UserCenterRole[]
+  contactsLogged Contact[]        @relation("ContactStaff")
+  auditEntries   AuditLog[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([organizationId])
+  @@map("users")
+}
+
+enum OrgRole {
+  ORG_ADMIN  // HQ — sees all centers, edits org defaults
+  STAFF      // default
+
+  @@map("org_role")
+}
+
+model UserCenterRole {
+  userId   String @map("user_id")
+  centerId String @map("center_id")
+  role     CenterRole
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  center Center @relation(fields: [centerId], references: [id], onDelete: Cascade)
+
+  @@id([userId, centerId])
+  @@map("user_center_roles")
+}
+
+enum CenterRole {
+  DIRECTOR  // can edit center settings + override thresholds
+  STAFF     // can log contacts, edit people, record donations
+  VIEWER    // read-only
+
+  @@map("center_role")
+}
+
+// ─── CONSTITUENTS (Donors + Prospects collapsed) ─────────────────────
+
+model Person {
+  id       String @id @default(cuid())
+  centerId String @map("center_id")
+  center   Center @relation(fields: [centerId], references: [id], onDelete: Restrict)
+
+  firstName    String  @map("first_name")
+  lastName     String  @map("last_name")
+  email        String?
+  phone        String?
+  organization String?
+
+  preferredContact PreferredContact? @map("preferred_contact")
+  source           ProspectSource?
+  interestLevel    InterestLevel?    @map("interest_level")  // null after conversion
+  donorStatus      DonorStatus?      @map("donor_status")     // null until conversion
+  givingFrequency  GivingFrequency?  @map("giving_frequency")
+
+  nextStep String? @map("next_step")
+  notes    String?
+
+  dateAdded         DateTime  @default(now()) @map("date_added")
+  lastContactAt     DateTime? @map("last_contact_at")
+  lastDonationAt    DateTime? @map("last_donation_at")
+  convertedToDonorAt DateTime? @map("converted_to_donor_at")
+
+  // Cached aggregates — refreshed on Contact/Donation write.
+  lifetimeAmount Decimal @default(0) @db.Decimal(12, 2) @map("lifetime_amount")
+  ytdAmount      Decimal @default(0) @db.Decimal(12, 2) @map("ytd_amount")
+  lastYearAmount Decimal @default(0) @db.Decimal(12, 2) @map("last_year_amount")
+
+  contacts  Contact[]
+  donations Donation[]
+  followUps FollowUp[]
+
+  // Phase 2 (Bloomerang import) — for idempotent re-runs
+  bloomerangId String? @unique @map("bloomerang_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([centerId])
+  @@index([centerId, convertedToDonorAt])
+  @@index([centerId, lastContactAt])
+  @@map("people")
+}
+
+enum PreferredContact {
+  EMAIL
+  PHONE
+  MAIL
+  IN_PERSON
+  TEXT
+
+  @@map("preferred_contact")
+}
+
+enum ProspectSource {
+  EVENT
+  REFERRAL
+  WALK_IN
+  ONLINE
+  SOCIAL_MEDIA
+  EMAIL_CAMPAIGN
+  ANNUAL_GALA
+  COMMUNITY_EVENT
+  OTHER
+
+  @@map("prospect_source")
+}
+
+enum InterestLevel {
+  HOT
+  WARM
+  COLD
+
+  @@map("interest_level")
+}
+
+enum DonorStatus {
+  ACTIVE
+  LAPSED
+  MAJOR_DONOR
+
+  @@map("donor_status")
+}
+
+enum GivingFrequency {
+  ONE_TIME
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+  IRREGULAR
+
+  @@map("giving_frequency")
+}
+
+// ─── CONTACT LOG ─────────────────────────────────────────────────────
+
+model Contact {
+  id       String @id @default(cuid())
+  personId String @map("person_id")
+  centerId String @map("center_id")
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  center Center @relation(fields: [centerId], references: [id], onDelete: Restrict)
+
+  date         DateTime
+  contactType  ContactType  @map("contact_type")
+  staffUserId  String?      @map("staff_user_id")
+  staff        User?        @relation("ContactStaff", fields: [staffUserId], references: [id])
+  outcome      ContactOutcome
+  notes        String?
+  nextFollowUpAt DateTime?  @map("next_follow_up_at")
+
+  // If outcome was MADE_DONATION, link to the resulting Donation.
+  donationId String?  @unique @map("donation_id")
+  donation   Donation? @relation(fields: [donationId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([personId, date])
+  @@index([centerId, date])
+  @@map("contacts")
+}
+
+enum ContactType {
+  PHONE_CALL
+  EMAIL
+  IN_PERSON_MEETING
+  EVENT
+  MAIL
+  TEXT_MESSAGE
+  ONLINE  // catch-all for online-giving auto-logs
+
+  @@map("contact_type")
+}
+
+enum ContactOutcome {
+  MADE_DONATION
+  SCHEDULED_FOLLOW_UP
+  NO_ANSWER
+  LEFT_MESSAGE
+  NOT_INTERESTED
+  INFORMATION_SENT
+  OTHER
+
+  @@map("contact_outcome")
+}
+
+// ─── DONATIONS + CAMPAIGNS ───────────────────────────────────────────
+
+model Donation {
+  id       String @id @default(cuid())
+  personId String @map("person_id")
+  centerId String @map("center_id")
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  center Center @relation(fields: [centerId], references: [id], onDelete: Restrict)
+
+  date           DateTime
+  amount         Decimal       @db.Decimal(12, 2)
+  paymentMethod  PaymentMethod @map("payment_method")
+  source         DonationSource @default(MANUAL)
+
+  campaignId String?   @map("campaign_id")
+  campaign   Campaign? @relation(fields: [campaignId], references: [id])
+
+  receiptSent   Boolean @default(false) @map("receipt_sent")
+  thankYouSent  Boolean @default(false) @map("thank_you_sent")
+  notes         String?
+
+  // Phase 3 (Stripe)
+  stripeChargeId       String? @unique @map("stripe_charge_id")
+  stripeSubscriptionId String? @map("stripe_subscription_id")
+  stripeFeesCents      Int?    @map("stripe_fees_cents")
+  donorCoveredFees     Boolean @default(false) @map("donor_covered_fees")
+
+  // Phase 2 (Bloomerang import)
+  bloomerangId String? @unique @map("bloomerang_id")
+
+  contact Contact?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([personId, date])
+  @@index([centerId, date])
+  @@index([campaignId])
+  @@map("donations")
+}
+
+enum PaymentMethod {
+  CHECK
+  CREDIT_CARD
+  CASH
+  ONLINE
+  BANK_TRANSFER
+
+  @@map("payment_method")
+}
+
+enum DonationSource {
+  MANUAL    // staff typed it in
+  STRIPE    // came through online giving (Phase 3)
+  IMPORTED  // came from Bloomerang CSV (Phase 2)
+
+  @@map("donation_source")
+}
+
+model Campaign {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  centerId       String?      @map("center_id")  // null = org-wide
+  center         Center?      @relation(fields: [centerId], references: [id])
+
+  name        String
+  description String?
+  goalAmount  Decimal? @db.Decimal(12, 2) @map("goal_amount")
+  startDate   DateTime? @map("start_date")
+  endDate     DateTime? @map("end_date")
+  active      Boolean   @default(true)
+
+  donations Donation[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([organizationId])
+  @@map("campaigns")
+}
+
+// ─── FOLLOW-UP QUEUE ─────────────────────────────────────────────────
+
+// Materialised view of who needs attention. Refreshed on Contact/Donation
+// write and by a scheduled job (Phase 1+).
+
+model FollowUp {
+  id       String @id @default(cuid())
+  personId String @map("person_id")
+  centerId String @map("center_id")
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  center Center @relation(fields: [centerId], references: [id], onDelete: Restrict)
+
+  dueAt     DateTime? @map("due_at")   // from Contact.nextFollowUpAt, if any
+  alertColor AlertColor @map("alert_color")
+  priority  Int       @default(0)      // computed: lifetime + alert + days
+  reason    String?                    // "Lapsed donor", "Red prospect", etc.
+
+  // Workflow state
+  status     FollowUpStatus @default(OPEN)
+  snoozedUntil DateTime? @map("snoozed_until")
+  assignedStaffId String? @map("assigned_staff_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([centerId, status, priority])
+  @@index([personId])
+  @@map("follow_ups")
+}
+
+enum AlertColor {
+  GREEN
+  YELLOW
+  ORANGE
+  RED
+
+  @@map("alert_color")
+}
+
+enum FollowUpStatus {
+  OPEN
+  SNOOZED
+  DONE
+  DISMISSED
+
+  @@map("follow_up_status")
+}
+
+// ─── AUDIT ───────────────────────────────────────────────────────────
+
+model AuditLog {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?      @map("user_id")
+  user           User?        @relation(fields: [userId], references: [id])
+
+  entityType String @map("entity_type")  // "Person", "Donation", "Contact", …
+  entityId   String @map("entity_id")
+  action     String                       // "create" | "update" | "delete"
+  diff       Json?                        // before/after for updates
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([organizationId, createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_log")
+}

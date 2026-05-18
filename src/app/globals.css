@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: 210 20% 98%;
+  --foreground: 240 10% 3.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 3.9%;
+  --muted: 240 4.8% 95.9%;
+  --muted-foreground: 240 3.8% 46.1%;
+  --primary: 18 88% 48%;          /* TC orange */
+  --primary-foreground: 0 0% 100%;
+  --border: 240 5.9% 90%;
+  --ring: 18 88% 48%;
+  --radius: 0.5rem;
+  --sidebar: 0 0% 99%;
+  --sidebar-foreground: 240 5.3% 26.1%;
+  --sidebar-border: 220 13% 91%;
+  --sidebar-accent: 18 88% 95%;
+  --sidebar-accent-foreground: 18 88% 30%;
+}
+
+.dark {
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --card: 240 10% 5.5%;
+  --card-foreground: 0 0% 98%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+  --primary: 18 88% 55%;
+  --primary-foreground: 0 0% 100%;
+  --border: 240 3.7% 15.9%;
+  --ring: 18 88% 55%;
+  --sidebar: 240 10% 5.5%;
+  --sidebar-foreground: 240 5% 84.9%;
+  --sidebar-border: 240 3.7% 15.9%;
+  --sidebar-accent: 18 88% 20%;
+  --sidebar-accent-foreground: 18 88% 90%;
+}
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-border: hsl(var(--border));
+  --color-ring: hsl(var(--ring));
+  --color-sidebar: hsl(var(--sidebar));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --radius-default: var(--radius);
+}
+
+body {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
