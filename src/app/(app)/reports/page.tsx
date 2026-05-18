@@ -13,17 +13,20 @@ const REPORTS: Report[] = [
   {
     name: "Campaign Performance",
     phase: "Phase 1.5",
-    description: "$ raised per campaign, % to goal, by month.",
+    href: "/reports/campaigns",
+    description: "$ raised per campaign, % to goal, gift count, average gift.",
   },
   {
     name: "Biggest Supporters",
     phase: "Phase 1.5",
-    description: "Top N donors by lifetime, with last-contact recency overlay.",
+    href: "/reports/biggest-supporters",
+    description: "Top N donors by lifetime, with last-contact recency.",
   },
   {
     name: "Donor Retention",
-    phase: "Phase 2",
-    description: "What % of last year's donors gave this year?",
+    phase: "Phase 1.5",
+    href: "/reports/retention",
+    description: "What % of last year's donors gave this year? Lapsed list to re-engage.",
   },
   {
     name: "YoY by Center",

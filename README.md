@@ -58,13 +58,30 @@ sign in as a different seeded user.
 | Phase | Status | Scope |
 | --- | --- | --- |
 | 0 | ✅ done | Bootstrap, schema, seed, read-only pages |
+| 0.5 | ✅ done | Auth0 with dev-mode fallback |
 | 1 | ✅ done | Write paths: log contact, add donation, add/edit person; Monthly Report |
+| 1.5 | ✅ done | Follow-up snooze, Campaign Performance, Biggest Supporters, Retention reports |
 | 2 | ✅ done | Bloomerang CSV importer (Constituents / Transactions / Interactions) |
-| 0.5 | next | Swap dev auth shim for Auth0 |
-| 1.5 | later | Follow-up snooze/done, campaign + retention reports |
 | 3 | later | Stripe online giving + donor portal |
 | 4 | later | Outlook + Gmail email-send/log |
 | 5 | later | Automations |
+
+## Auth0
+
+When all four `AUTH0_*` env vars are set (`AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`,
+`AUTH0_CLIENT_SECRET`, `AUTH0_SECRET`) plus `APP_BASE_URL`, the app uses
+Auth0. Sign-in goes through `/auth/login`, callback at `/auth/callback`,
+sign-out at `/auth/logout` — all owned by the SDK via `src/middleware.ts`.
+
+User provisioning: on first sign-in the SDK gives us a `sub` and `email`.
+We look up an existing `User` by email (seeded or imported), stamp the
+Auth0 `sub` onto the row, and treat them as that user thereafter. If no
+`User` row exists, the user lands on `/access-pending` and an admin
+must create them.
+
+When Auth0 env vars are unset and `NODE_ENV !== "production"`, the app
+falls back to the dev shim (`DEV_USER_EMAIL`). In production with Auth0
+unset, `getCurrentUser()` returns null and the app refuses to serve.
 
 ## Bloomerang import
 

@@ -52,7 +52,7 @@ const sections: NavSection[] = [
   },
 ];
 
-export function Sidebar() {
+export function Sidebar({ footer }: { footer?: React.ReactNode }) {
   const pathname = usePathname();
   return (
     <aside className="flex h-full w-56 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
@@ -98,9 +98,7 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="border-t border-sidebar-border p-3 text-xs text-muted-foreground">
-        Dev mode — auth shim
-      </div>
+      {footer}
     </aside>
   );
 }

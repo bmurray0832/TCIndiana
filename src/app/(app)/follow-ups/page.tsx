@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { AlertBadge } from "@/components/AlertBadge";
+import { SnoozeMenu } from "@/components/SnoozeMenu";
 import { listPeople } from "@/lib/queries";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
@@ -35,12 +36,13 @@ export default async function FollowUpsPage() {
               <th className="px-4 py-2.5 text-right font-medium">Lifetime</th>
               <th className="px-4 py-2.5 font-medium">Alert</th>
               <th className="px-4 py-2.5 font-medium">Center</th>
+              <th className="px-4 py-2.5 text-right font-medium">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {queue.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                <td colSpan={8} className="px-4 py-12 text-center text-sm text-muted-foreground">
                   Empty queue — everybody is current. 🎉
                 </td>
               </tr>
@@ -64,6 +66,9 @@ export default async function FollowUpsPage() {
                       <AlertBadge color={p.alertColor} />
                     </td>
                     <td className="px-4 py-2 text-xs text-muted-foreground">{p.center.name}</td>
+                    <td className="px-4 py-2 text-right">
+                      <SnoozeMenu personId={p.id} snoozedUntil={p.snoozedUntil} />
+                    </td>
                   </tr>
                 );
               })

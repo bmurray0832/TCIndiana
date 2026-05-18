@@ -75,6 +75,8 @@ model User {
 
   email      String  @unique
   name       String
+  // Auth0 subject (sub) — set on first sign-in, then used for lookup.
+  auth0Sub   String? @unique @map("auth0_sub")
   // org-wide role. Center-level access lives on UserCenterRole.
   orgRole    OrgRole @default(STAFF) @map("org_role")
   active     Boolean @default(true)
@@ -148,6 +150,9 @@ model Person {
   lastContactAt     DateTime? @map("last_contact_at")
   lastDonationAt    DateTime? @map("last_donation_at")
   convertedToDonorAt DateTime? @map("converted_to_donor_at")
+  // When set in the future, this person is suppressed from the
+  // follow-up queue and shown as green-snoozed on the dashboard.
+  snoozedUntil      DateTime? @map("snoozed_until")
 
   // Cached aggregates — refreshed on Contact/Donation write.
   lifetimeAmount Decimal @default(0) @db.Decimal(12, 2) @map("lifetime_amount")

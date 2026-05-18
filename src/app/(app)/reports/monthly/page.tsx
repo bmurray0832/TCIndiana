@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/KpiCard";
 import { prisma } from "@/lib/prisma";
-import { getAccessibleCenterIds } from "@/lib/auth-dev";
+import { getAccessibleCenterIds } from "@/lib/auth";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";

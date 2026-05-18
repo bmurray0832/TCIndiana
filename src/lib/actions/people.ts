@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getAccessibleCenterIds, requireWriteAccess } from "@/lib/auth-dev";
+import { getAccessibleCenterIds, requireWriteAccess } from "@/lib/auth";
 
 const PreferredContact = z.enum(["EMAIL", "PHONE", "MAIL", "IN_PERSON", "TEXT"]);
 const ProspectSource = z.enum([

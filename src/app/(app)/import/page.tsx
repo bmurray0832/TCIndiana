@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Users, DollarSign, MessageSquare } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth-dev";
+import { getCurrentUser } from "@/lib/auth";
 import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";

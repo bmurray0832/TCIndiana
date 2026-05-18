@@ -14,12 +14,16 @@ export const DEFAULT_THRESHOLDS: AlertThresholds = {
 };
 
 /** Compute the alert color for a person based on days since last contact.
- *  `isDonor` flips between donor and prospect thresholds. */
+ *  `isDonor` flips between donor and prospect thresholds. A future
+ *  `snoozedUntil` suppresses the alert to GREEN. */
 export function computeAlertColor(
   daysSinceContact: number | null,
   isDonor: boolean,
   thresholds: AlertThresholds = DEFAULT_THRESHOLDS,
+  snoozedUntil?: Date | null,
 ): AlertColor {
+  if (snoozedUntil && new Date(snoozedUntil).getTime() > Date.now()) return "GREEN";
+
   // Never been contacted → treat as red so it surfaces.
   if (daysSinceContact === null) return "RED";
 

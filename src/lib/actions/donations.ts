@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/prisma";
-import { getAccessibleCenterIds, requireWriteAccess } from "@/lib/auth-dev";
+import { getAccessibleCenterIds, requireWriteAccess } from "@/lib/auth";
 import { recomputePerson } from "@/lib/recompute";
 
 const PaymentMethod = z.enum(["CHECK", "CREDIT_CARD", "CASH", "ONLINE", "BANK_TRANSFER"]);

@@ -7,7 +7,7 @@ import {
   getCurrentUser,
   getAccessibleCenterIds,
   requireWriteAccess,
-} from "@/lib/auth-dev";
+} from "@/lib/auth";
 import { recomputePerson } from "@/lib/recompute";
 import type { ImportInput, ImportResult, Mapping } from "@/lib/import/types";
 import {

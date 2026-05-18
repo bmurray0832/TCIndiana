@@ -2,7 +2,7 @@
  *  current user's accessible centers via the auth shim. */
 
 import { prisma } from "@/lib/prisma";
-import { getAccessibleCenterIds, getCurrentUser } from "@/lib/auth-dev";
+import { getAccessibleCenterIds, getCurrentUser } from "@/lib/auth";
 import {
   computeAlertColor,
   daysSinceContact,
@@ -39,7 +39,11 @@ async function thresholdsForCenter(centerId: string): Promise<AlertThresholds> {
 function decorate(p: Person & { center: { id: string; name: string } }, thresholds: AlertThresholds): PersonWithAlert {
   const days = daysSinceContact(p.lastContactAt);
   const isDonor = p.convertedToDonorAt !== null;
-  return { ...p, daysSinceContact: days, alertColor: computeAlertColor(days, isDonor, thresholds) };
+  return {
+    ...p,
+    daysSinceContact: days,
+    alertColor: computeAlertColor(days, isDonor, thresholds, p.snoozedUntil),
+  };
 }
 
 export async function listPeople(opts: { kind: "donor" | "prospect" | "all" }): Promise<PersonWithAlert[]> {
@@ -95,7 +99,7 @@ export async function getPerson(id: string) {
   return {
     ...p,
     daysSinceContact: days,
-    alertColor: computeAlertColor(days, isDonor, t),
+    alertColor: computeAlertColor(days, isDonor, t, p.snoozedUntil),
   };
 }
 
