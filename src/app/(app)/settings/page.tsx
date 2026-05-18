@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users, Building2, ShieldCheck } from "lucide-react";
+import { Users, Building2, ShieldCheck, Mail } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { prisma } from "@/lib/prisma";
 import { currentUserSummary } from "@/lib/queries";
@@ -39,6 +39,13 @@ export default async function SettingsPage() {
           title="Centers"
           subtitle={`${centerCount} active`}
           description="Add or rename centers, set alert thresholds, brand the donation page."
+        />
+        <Tile
+          href="/settings/integrations"
+          icon={Mail}
+          title="Email integrations"
+          subtitle="Per-user mailbox"
+          description="Connect your Outlook so emails sent from the CRM come from your address."
         />
         <Tile
           href="#"

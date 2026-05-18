@@ -6,6 +6,7 @@ import { Resend } from "resend";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, getAccessibleCenterIds, requireWriteAccess } from "@/lib/auth";
 import { recomputePerson } from "@/lib/recompute";
+import { sendMailAsUser } from "@/lib/microsoft-graph";
 
 const schema = z.object({
   personId: z.string().min(1),
@@ -51,28 +52,39 @@ export async function sendEmailToPerson(
   if (!person.email) return { ok: false, error: "This person has no email address on file." };
   await requireWriteAccess(person.centerId);
 
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM_ADDRESS;
+  // Prefer the staff member's connected mailbox (Phase 4.5). Fall back
+  // to the shared Resend account, then to "not sent — just logged".
   let sendNote = "";
+  const userRecord = await prisma.user.findUnique({ where: { id: me.id }, select: { msGraphTokens: true } });
+  const hasMsGraph = !!userRecord?.msGraphTokens;
 
-  if (apiKey && from) {
-    try {
-      const resend = new Resend(apiKey);
-      const result = await resend.emails.send({
-        from,
-        to: person.email,
-        subject,
-        text: body,
-        replyTo: me.email,
-      });
-      if (result.error) {
-        return { ok: false, error: `Resend rejected the email: ${result.error.message}` };
-      }
-    } catch (err) {
-      return { ok: false, error: `Failed to send: ${(err as Error).message}` };
-    }
+  if (hasMsGraph) {
+    const result = await sendMailAsUser(me.id, { to: person.email, subject, body, replyTo: me.email });
+    if (!result.ok) return { ok: false, error: result.error };
+    sendNote = result.account ? `\n\n[Sent via ${result.account}.]` : "";
   } else {
-    sendNote = "\n\n[Resend not configured — email not actually sent. Contact logged for record-keeping.]";
+    const apiKey = process.env.RESEND_API_KEY;
+    const from = process.env.RESEND_FROM_ADDRESS;
+    if (apiKey && from) {
+      try {
+        const resend = new Resend(apiKey);
+        const result = await resend.emails.send({
+          from,
+          to: person.email,
+          subject,
+          text: body,
+          replyTo: me.email,
+        });
+        if (result.error) {
+          return { ok: false, error: `Resend rejected the email: ${result.error.message}` };
+        }
+        sendNote = "\n\n[Sent via shared mailbox.]";
+      } catch (err) {
+        return { ok: false, error: `Failed to send: ${(err as Error).message}` };
+      }
+    } else {
+      sendNote = "\n\n[No mailbox connected and Resend not configured — email not actually sent. Contact logged for record-keeping.]";
+    }
   }
 
   await prisma.$transaction(async (tx) => {

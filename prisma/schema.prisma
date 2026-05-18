@@ -81,9 +81,10 @@ model User {
   orgRole    OrgRole @default(STAFF) @map("org_role")
   active     Boolean @default(true)
 
-  // Phase 4 (email send + log)
-  // msGraphTokens Json? @map("ms_graph_tokens")
-  // gmailTokens   Json? @map("gmail_tokens")
+  // Phase 4.5 — per-user OAuth tokens for outbound email. JSON shape:
+  //   { accessToken, refreshToken, expiresAt: ISO-string, scope, account }
+  msGraphTokens Json? @map("ms_graph_tokens")
+  // gmailTokens   Json? @map("gmail_tokens")  // Phase 4.6 — same pattern as ms_graph_tokens
 
   centerRoles    UserCenterRole[]
   contactsLogged Contact[]        @relation("ContactStaff")
