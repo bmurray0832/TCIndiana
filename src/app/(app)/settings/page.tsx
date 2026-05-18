@@ -1,7 +1,8 @@
+import Link from "next/link";
+import { Users, Building2, ShieldCheck } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { prisma } from "@/lib/prisma";
 import { currentUserSummary } from "@/lib/queries";
-import { DEFAULT_THRESHOLDS, effectiveThresholds } from "@/lib/alerts";
 
 export const dynamic = "force-dynamic";
 
@@ -10,84 +11,79 @@ export default async function SettingsPage() {
   const org = me.user
     ? await prisma.organization.findUnique({ where: { id: me.user.organizationId } })
     : null;
-  const centers = me.user
-    ? await prisma.center.findMany({
-        where: { organizationId: me.user.organizationId },
-        orderBy: { name: "asc" },
-      })
-    : [];
-
-  const orgDefaults = effectiveThresholds(org?.defaultAlertThresholds, null);
+  const userCount = me.user
+    ? await prisma.user.count({ where: { organizationId: me.user.organizationId } })
+    : 0;
+  const centerCount = me.user
+    ? await prisma.center.count({ where: { organizationId: me.user.organizationId } })
+    : 0;
 
   return (
     <div className="p-6">
       <PageHeader
         title="Settings"
-        subtitle={`Signed in as ${me.user?.name ?? "—"} · ${me.user?.orgRole ?? ""}`}
+        subtitle={`${org?.name ?? ""} · ${me.user?.name ?? "—"} · ${me.user?.orgRole ?? ""}`}
       />
 
-      <section className="mb-8 rounded-lg border border-border bg-card">
-        <header className="border-b border-border px-4 py-3">
-          <h2 className="text-sm font-semibold">Organization</h2>
-        </header>
-        <div className="space-y-2 px-4 py-3 text-sm">
-          <Row label="Name" value={org?.name ?? "—"} />
-          <Row label="Slug" value={org?.slug ?? "—"} />
-          <Row label="Default alert thresholds (days since contact)" value="" />
-          <pre className="ml-4 text-xs text-muted-foreground">
-            Donors:    yellow {orgDefaults.donor.yellow} · orange {orgDefaults.donor.orange} · red {orgDefaults.donor.red}
-            {"\n"}Prospects: yellow {orgDefaults.prospect.yellow} · orange {orgDefaults.prospect.orange} · red {orgDefaults.prospect.red}
-          </pre>
-        </div>
+      <section className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+        <Tile
+          href="/settings/users"
+          icon={Users}
+          title="Users"
+          subtitle={`${userCount} provisioned`}
+          description="Add staff, change roles, assign center access."
+        />
+        <Tile
+          href="/settings/centers"
+          icon={Building2}
+          title="Centers"
+          subtitle={`${centerCount} active`}
+          description="Add or rename centers, set alert thresholds, brand the donation page."
+        />
+        <Tile
+          href="#"
+          icon={ShieldCheck}
+          title="Auth (Phase 0.5)"
+          subtitle="Active"
+          description="Auth0 owns sign-in. User provisioning happens on the Users page."
+          disabled
+        />
       </section>
-
-      <section className="mb-8 rounded-lg border border-border bg-card">
-        <header className="border-b border-border px-4 py-3">
-          <h2 className="text-sm font-semibold">Centers ({centers.length})</h2>
-        </header>
-        <ul className="divide-y divide-border">
-          {centers.map((c) => (
-            <li key={c.id} className="flex items-center justify-between px-4 py-3 text-sm">
-              <div>
-                <div className="font-medium">{c.name}</div>
-                <div className="text-xs text-muted-foreground">
-                  /{c.slug} · public giving page: /give/{c.donationPageSlug ?? c.slug}
-                </div>
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Thresholds:{" "}
-                {c.alertThresholds ? "overridden" : "using org defaults"}
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="rounded-lg border border-dashed border-border bg-card p-5">
-        <h2 className="text-sm font-semibold">Phase 0.5 — Auth</h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Currently using a dev shim that signs you in as <code>{process.env.DEV_USER_EMAIL ?? "<first org_admin>"}</code>.
-          Replace with Auth0 before any production data goes in.
-        </p>
-      </section>
-
-      <p className="mt-6 text-xs text-muted-foreground">
-        Editing settings is wired up in Phase 1 once writes land. This page is read-only for now.
-      </p>
-
-      <div className="hidden">
-        {/* Reference: shape of default thresholds when overriding a center: */}
-        <pre>{JSON.stringify(DEFAULT_THRESHOLDS, null, 2)}</pre>
-      </div>
     </div>
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="font-medium">{value}</span>
+function Tile({
+  href,
+  icon: Icon,
+  title,
+  subtitle,
+  description,
+  disabled,
+}: {
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  subtitle: string;
+  description: string;
+  disabled?: boolean;
+}) {
+  const card = (
+    <div
+      className={`h-full rounded-lg border p-5 ${
+        disabled ? "border-dashed border-border bg-card opacity-70" : "border-border bg-card transition-colors hover:border-primary/40"
+      }`}
+    >
+      <Icon className="h-5 w-5 text-primary" />
+      <div className="mt-2 text-base font-semibold">{title}</div>
+      <div className="text-xs text-muted-foreground">{subtitle}</div>
+      <p className="mt-2 text-xs text-muted-foreground">{description}</p>
+      {!disabled && <p className="mt-3 text-xs font-medium text-primary">Manage →</p>}
     </div>
+  );
+  return disabled ? card : (
+    <Link href={href} className="block">
+      {card}
+    </Link>
   );
 }
