@@ -40,3 +40,28 @@ export async function getAccessibleCenterIds(): Promise<string[]> {
 
   return user.centerRoles.map((r) => r.centerId);
 }
+
+/** Throws if the current user can't write to the given center. STAFF
+ *  and DIRECTOR can write; VIEWER cannot. ORG_ADMIN can write to any
+ *  center in their org. */
+export async function requireWriteAccess(centerId: string) {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("Not signed in");
+
+  if (user.orgRole === "ORG_ADMIN") {
+    const center = await prisma.center.findUnique({
+      where: { id: centerId },
+      select: { organizationId: true },
+    });
+    if (center?.organizationId !== user.organizationId) {
+      throw new Error("Center not in your organization");
+    }
+    return user;
+  }
+
+  const role = user.centerRoles.find((r) => r.centerId === centerId);
+  if (!role || role.role === "VIEWER") {
+    throw new Error("You don't have write access to this center");
+  }
+  return user;
+}

@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { AlertBadge } from "@/components/AlertBadge";
-import { getPerson } from "@/lib/queries";
+import { PersonActions } from "@/components/PersonActions";
+import { getPerson, currentUserSummary } from "@/lib/queries";
+import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatDate, initials } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +14,14 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
   if (!p) notFound();
 
   const isDonor = !!p.convertedToDonorAt;
+  const [me, campaigns] = await Promise.all([
+    currentUserSummary(),
+    prisma.campaign.findMany({
+      where: { active: true, OR: [{ centerId: null }, { centerId: p.centerId }] },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   return (
     <div className="p-6">
@@ -37,14 +47,12 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
             </div>
           </div>
         </div>
-        <div className="flex gap-2 text-xs">
-          <button disabled className="cursor-not-allowed rounded-md border border-border px-3 py-1.5 opacity-60">
-            Log Contact (Phase 1)
-          </button>
-          <button disabled className="cursor-not-allowed rounded-md border border-border px-3 py-1.5 opacity-60">
-            Add Donation (Phase 1)
-          </button>
-        </div>
+        <PersonActions
+          person={p}
+          centers={me.centers}
+          campaigns={campaigns}
+          isDonor={isDonor}
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">

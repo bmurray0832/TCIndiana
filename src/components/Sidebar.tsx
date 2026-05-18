@@ -38,6 +38,7 @@ const sections: NavSection[] = [
     label: "Giving",
     items: [
       { href: "/donations", label: "Donations", icon: DollarSign },
+      { href: "/reports/monthly", label: "Monthly Report", icon: FileBarChart },
       { href: "/reports", label: "Reports", icon: FileBarChart },
     ],
   },
@@ -69,7 +70,7 @@ export function Sidebar() {
             </div>
             <ul className="space-y-0.5">
               {section.items.map((item) => {
-                const active = pathname === item.href || pathname.startsWith(item.href + "/");
+                const active = pathname === item.href;
                 const Icon = item.icon;
                 return (
                   <li key={item.href}>
