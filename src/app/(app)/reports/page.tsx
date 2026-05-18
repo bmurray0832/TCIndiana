@@ -30,13 +30,15 @@ const REPORTS: Report[] = [
   },
   {
     name: "YoY by Center",
-    phase: "Phase 2",
-    description: "Side-by-side comparison of each center's giving.",
+    phase: "Phase 1.5",
+    href: "/reports/yoy",
+    description: "Side-by-side comparison of each center's giving year-over-year.",
   },
   {
     name: "Pipeline Funnel",
-    phase: "Phase 2",
-    description: "Cold → Warm → Hot → Donor conversion rates over the last 90 days.",
+    phase: "Phase 1.5",
+    href: "/reports/funnel",
+    description: "Cold → Warm → Hot → Donor snapshot + conversions in a chosen window.",
   },
 ];
 
