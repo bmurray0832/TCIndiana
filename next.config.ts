@@ -3,6 +3,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
+  experimental: {
+    // Bloomerang exports can be a few MB on the larger orgs.
+    serverActions: { bodySizeLimit: "10mb" },
+  },
   async headers() {
     return [
       {

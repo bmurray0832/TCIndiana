@@ -28,6 +28,7 @@ model Organization {
   users     User[]
   campaigns Campaign[]
   auditLog  AuditLog[]
+  imports   BloomerangImport[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -85,6 +86,7 @@ model User {
   centerRoles    UserCenterRole[]
   contactsLogged Contact[]        @relation("ContactStaff")
   auditEntries   AuditLog[]
+  imports        BloomerangImport[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -239,6 +241,9 @@ model Contact {
   // If outcome was MADE_DONATION, link to the resulting Donation.
   donationId String?  @unique @map("donation_id")
   donation   Donation? @relation(fields: [donationId], references: [id])
+
+  // Phase 2 (Bloomerang import)
+  bloomerangId String? @unique @map("bloomerang_id")
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -401,6 +406,38 @@ enum FollowUpStatus {
   DISMISSED
 
   @@map("follow_up_status")
+}
+
+// ─── BLOOMERANG IMPORTS (Phase 2) ────────────────────────────────────
+
+model BloomerangImport {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?      @map("user_id")
+  user           User?        @relation(fields: [userId], references: [id])
+
+  kind     ImportKind
+  filename String?
+  centerId String? @map("center_id")  // for constituent imports
+
+  created   Int  @default(0)
+  updated   Int  @default(0)
+  skipped   Int  @default(0)
+  errorRows Json? @map("error_rows")  // [{ row, error }]
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([organizationId, createdAt])
+  @@map("bloomerang_imports")
+}
+
+enum ImportKind {
+  CONSTITUENTS
+  TRANSACTIONS
+  INTERACTIONS
+
+  @@map("import_kind")
 }
 
 // ─── AUDIT ───────────────────────────────────────────────────────────

@@ -58,12 +58,27 @@ sign in as a different seeded user.
 | Phase | Status | Scope |
 | --- | --- | --- |
 | 0 | ✅ done | Bootstrap, schema, seed, read-only pages |
+| 1 | ✅ done | Write paths: log contact, add donation, add/edit person; Monthly Report |
+| 2 | ✅ done | Bloomerang CSV importer (Constituents / Transactions / Interactions) |
 | 0.5 | next | Swap dev auth shim for Auth0 |
-| 1 | next | Write paths: log contact, add donation, edit person, snooze follow-up; Monthly Report |
-| 2 | later | Bloomerang CSV importer |
+| 1.5 | later | Follow-up snooze/done, campaign + retention reports |
 | 3 | later | Stripe online giving + donor portal |
 | 4 | later | Outlook + Gmail email-send/log |
-| 5 | later | Retention reports + automations |
+| 5 | later | Automations |
+
+## Bloomerang import
+
+`/import` is a one-time CSV importer. Three sub-tools, run in order:
+
+1. **Constituents** → People (donors and prospects). Pick a center; all
+   rows in the file get assigned to it. Idempotent on `Constituent ID`.
+2. **Transactions** → Donations. Matched to the person by Constituent
+   ID. Idempotent on `Transaction ID`. Auto-creates campaigns by name.
+3. **Interactions** → Contact Log entries. Matched by Constituent ID.
+
+Each tool: upload CSV → confirm column mapping (auto-detected, editable)
+→ dry-run preview (created / updated / skipped / errors) → commit.
+History of imports is shown on the landing page.
 
 ## Layout
 

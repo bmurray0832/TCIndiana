@@ -12,6 +12,7 @@ import {
   FileBarChart,
   Settings,
   Heart,
+  Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -44,7 +45,10 @@ const sections: NavSection[] = [
   },
   {
     label: "Admin",
-    items: [{ href: "/settings", label: "Settings", icon: Settings }],
+    items: [
+      { href: "/import", label: "Bloomerang import", icon: Download },
+      { href: "/settings", label: "Settings", icon: Settings },
+    ],
   },
 ];
 
