@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/PageHeader";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser, getAccessibleCenterIds } from "@/lib/auth";
+import { getCurrentUser, getActiveCenterIds } from "@/lib/auth";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +19,7 @@ export default async function YoYReportPage({
   const thisYear = Number(sp.year) || now.getFullYear();
   const lastYear = thisYear - 1;
 
-  const centerIds = await getAccessibleCenterIds();
+  const centerIds = await getActiveCenterIds();
   const centers = await prisma.center.findMany({
     where: { id: { in: centerIds } },
     orderBy: { name: "asc" },

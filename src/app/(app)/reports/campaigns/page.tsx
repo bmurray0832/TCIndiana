@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/PageHeader";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser, getAccessibleCenterIds } from "@/lib/auth";
+import { getCurrentUser, getActiveCenterIds } from "@/lib/auth";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function CampaignsReportPage() {
   const me = await getCurrentUser();
   if (!me) return null;
-  const centerIds = await getAccessibleCenterIds();
+  const centerIds = await getActiveCenterIds();
 
   const campaigns = await prisma.campaign.findMany({
     where: {

@@ -133,3 +133,8 @@ export async function requireWriteAccess(centerId: string) {
   }
   return user;
 }
+
+// Convenience re-export so existing imports continue to work. The
+// implementation lives in @/lib/center-scope to avoid pulling the
+// cookie API into pure-auth code paths.
+export { getActiveCenterIds } from "@/lib/center-scope";

@@ -1,13 +1,13 @@
 import { PageHeader } from "@/components/PageHeader";
 import { DonationsPageBody } from "@/components/pages/DonationsPageBody";
 import { prisma } from "@/lib/prisma";
-import { getAccessibleCenterIds, getCurrentUser } from "@/lib/auth";
+import { getActiveCenterIds, getCurrentUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function DonationsPage() {
   const me = await getCurrentUser();
-  const centerIds = await getAccessibleCenterIds();
+  const centerIds = await getActiveCenterIds();
   const [donations, campaigns] = await Promise.all([
     prisma.donation.findMany({
       where: { centerId: { in: centerIds } },

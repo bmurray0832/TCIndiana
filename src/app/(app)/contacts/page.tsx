@@ -1,12 +1,12 @@
 import { PageHeader } from "@/components/PageHeader";
 import { ContactsPageBody } from "@/components/pages/ContactsPageBody";
 import { prisma } from "@/lib/prisma";
-import { getAccessibleCenterIds } from "@/lib/auth";
+import { getActiveCenterIds } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function ContactsPage() {
-  const centerIds = await getAccessibleCenterIds();
+  const centerIds = await getActiveCenterIds();
   const contacts = await prisma.contact.findMany({
     where: { centerId: { in: centerIds } },
     orderBy: { date: "desc" },

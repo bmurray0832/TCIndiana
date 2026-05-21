@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/KpiCard";
 import { prisma } from "@/lib/prisma";
-import { getAccessibleCenterIds } from "@/lib/auth";
+import { getActiveCenterIds } from "@/lib/auth";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +37,7 @@ export default async function MonthlyReportPage({
 }) {
   const sp = await searchParams;
   const { start, end, label } = parseMonth(sp.month);
-  const centerIds = await getAccessibleCenterIds();
+  const centerIds = await getActiveCenterIds();
   const where = { centerId: { in: centerIds }, date: { gte: start, lt: end } };
 
   const [agg, count, max, donations, contactsCount] = await Promise.all([

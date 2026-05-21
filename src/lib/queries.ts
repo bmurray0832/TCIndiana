@@ -2,7 +2,7 @@
  *  current user's accessible centers via the auth shim. */
 
 import { prisma } from "@/lib/prisma";
-import { getAccessibleCenterIds, getCurrentUser } from "@/lib/auth";
+import { getActiveCenterIds, getCurrentUser } from "@/lib/auth";
 import {
   computeAlertColor,
   daysSinceContact,
@@ -47,7 +47,7 @@ function decorate(p: Person & { center: { id: string; name: string } }, threshol
 }
 
 export async function listPeople(opts: { kind: "donor" | "prospect" | "all" }): Promise<PersonWithAlert[]> {
-  const centerIds = await getAccessibleCenterIds();
+  const centerIds = await getActiveCenterIds();
   if (centerIds.length === 0) return [];
 
   const where: { centerId: { in: string[] }; convertedToDonorAt?: { not: null } | null } = {
@@ -77,7 +77,7 @@ export async function listPeople(opts: { kind: "donor" | "prospect" | "all" }): 
 }
 
 export async function getPerson(id: string) {
-  const centerIds = await getAccessibleCenterIds();
+  const centerIds = await getActiveCenterIds();
   const p = await prisma.person.findFirst({
     where: { id, centerId: { in: centerIds } },
     include: {
@@ -104,7 +104,7 @@ export async function getPerson(id: string) {
 }
 
 export async function dashboardMetrics() {
-  const centerIds = await getAccessibleCenterIds();
+  const centerIds = await getActiveCenterIds();
   if (centerIds.length === 0) {
     return {
       donors: 0,
@@ -172,7 +172,7 @@ export async function dashboardMetrics() {
  *  and per-center performance. Lives separately so the original
  *  dashboardMetrics() stays focused. */
 export async function leadershipMetrics() {
-  const centerIds = await getAccessibleCenterIds();
+  const centerIds = await getActiveCenterIds();
   const me = await getCurrentUser();
   if (centerIds.length === 0 || !me) {
     return null;
@@ -357,7 +357,7 @@ export async function leadershipMetrics() {
 
 export async function currentUserSummary() {
   const me = await getCurrentUser();
-  const centerIds = await getAccessibleCenterIds();
+  const centerIds = await getActiveCenterIds();
   const centers = centerIds.length
     ? await prisma.center.findMany({
         where: { id: { in: centerIds } },

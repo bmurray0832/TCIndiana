@@ -1,7 +1,7 @@
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/KpiCard";
 import { prisma } from "@/lib/prisma";
-import { getAccessibleCenterIds } from "@/lib/auth";
+import { getActiveCenterIds } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ export default async function FunnelReportPage({
   const windowDays = Number(sp.window) || 90;
   const since = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000);
 
-  const centerIds = await getAccessibleCenterIds();
+  const centerIds = await getActiveCenterIds();
   const where = { centerId: { in: centerIds } };
 
   // Current snapshot of prospects by interest level, plus donors.

@@ -4,7 +4,7 @@
  *  attention. */
 
 import { prisma } from "@/lib/prisma";
-import { getAccessibleCenterIds, getCurrentUser } from "@/lib/auth";
+import { getActiveCenterIds, getCurrentUser } from "@/lib/auth";
 
 export type PeriodKey = "month" | "quarter" | "year";
 
@@ -169,7 +169,7 @@ export type ExecutiveReport = {
 
 export async function executiveReport(): Promise<ExecutiveReport | null> {
   const me = await getCurrentUser();
-  const centerIds = await getAccessibleCenterIds();
+  const centerIds = await getActiveCenterIds();
   if (!me || centerIds.length === 0) return null;
 
   const ranges = periodRanges();

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/KpiCard";
 import { prisma } from "@/lib/prisma";
-import { getAccessibleCenterIds } from "@/lib/auth";
+import { getActiveCenterIds } from "@/lib/auth";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ export default async function RetentionReportPage({
   const followStart = new Date(followYear, 0, 1);
   const followEnd = new Date(followYear + 1, 0, 1);
 
-  const centerIds = await getAccessibleCenterIds();
+  const centerIds = await getActiveCenterIds();
 
   // Donors who gave at least once during the cohort year.
   const cohortDonations = await prisma.donation.findMany({
