@@ -19,7 +19,16 @@ const LAST_NAMES = [
   "Taylor","Jackson","White","Harris","Lewis","Clark","Robinson","Walker","Hall","Allen",
 ];
 
-const CAMPAIGN_NAMES = ["General Fund", "Capital Campaign", "Program Support", "Emergency Relief"];
+const CAMPAIGN_NAMES = [
+  "One Time Gift",
+  "Monthly Support",
+  "Golf Outing",
+  "Banquet",
+  "Tuition",
+  "Work Department",
+  "Fundraising Donation",
+  "Building Donation",
+];
 const SOURCES = ["EVENT", "REFERRAL", "WALK_IN", "ONLINE", "SOCIAL_MEDIA", "EMAIL_CAMPAIGN", "ANNUAL_GALA", "COMMUNITY_EVENT"] as const;
 const INTERESTS = ["HOT", "WARM", "COLD"] as const;
 const DONOR_STATUSES = ["ACTIVE", "LAPSED", "MAJOR_DONOR"] as const;
@@ -104,14 +113,18 @@ export async function seedSynthetic(prisma: PrismaClient) {
 
   console.log("🎯 Campaigns");
   const campaigns: Record<string, string> = {};
+  const goals: Record<string, number> = {
+    "Building Donation": 250000,
+    "Golf Outing": 50000,
+    "Banquet": 75000,
+  };
   for (const name of CAMPAIGN_NAMES) {
-    const goal = name === "Capital Campaign" ? 250000 : name === "General Fund" ? 100000 : null;
     const c = await prisma.campaign.create({
       data: {
         organizationId: org.id,
         name,
         active: true,
-        goalAmount: goal ? new Prisma.Decimal(goal) : null,
+        goalAmount: goals[name] ? new Prisma.Decimal(goals[name]) : null,
       },
     });
     campaigns[name] = c.id;

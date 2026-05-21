@@ -249,3 +249,93 @@ export async function clearCenterThresholds(id: string) {
   revalidatePath("/settings/centers");
   return { ok: true };
 }
+
+// ─── Campaigns ──────────────────────────────────────────────────────
+
+const campaignSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  description: optional(z.string()),
+  goalAmount: z.preprocess(
+    (v) => (v === "" || v === null || v === undefined ? undefined : Number(v)),
+    z.number().nonnegative().optional(),
+  ),
+  centerId: optional(z.string()),
+  active: z.preprocess((v) => v === "on" || v === "true" || v === true, z.boolean()),
+});
+
+export type CampaignFormState =
+  | { ok: true; id: string }
+  | { ok: false; error: string; fieldErrors?: Record<string, string> }
+  | null;
+
+export async function createCampaign(
+  _prev: CampaignFormState,
+  formData: FormData,
+): Promise<CampaignFormState> {
+  const me = await requireOrgAdmin();
+  const parsed = campaignSchema.safeParse(Object.fromEntries(formData.entries()));
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) fieldErrors[String(issue.path[0])] = issue.message;
+    return { ok: false, error: "Please fix the highlighted fields.", fieldErrors };
+  }
+  const data = parsed.data;
+
+  const dupe = await prisma.campaign.findFirst({
+    where: { organizationId: me.organizationId, name: { equals: data.name, mode: "insensitive" } },
+  });
+  if (dupe) return { ok: false, error: "A campaign with that name already exists." };
+
+  const c = await prisma.campaign.create({
+    data: {
+      organizationId: me.organizationId,
+      name: data.name,
+      description: data.description,
+      goalAmount: data.goalAmount != null ? new Prisma.Decimal(data.goalAmount) : null,
+      centerId: data.centerId || null,
+      active: data.active,
+    },
+  });
+  revalidatePath("/settings/campaigns");
+  return { ok: true, id: c.id };
+}
+
+export async function updateCampaign(
+  id: string,
+  _prev: CampaignFormState,
+  formData: FormData,
+): Promise<CampaignFormState> {
+  const me = await requireOrgAdmin();
+  const existing = await prisma.campaign.findUnique({ where: { id } });
+  if (!existing || existing.organizationId !== me.organizationId) {
+    return { ok: false, error: "Campaign not found." };
+  }
+  const parsed = campaignSchema.safeParse(Object.fromEntries(formData.entries()));
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) fieldErrors[String(issue.path[0])] = issue.message;
+    return { ok: false, error: "Please fix the highlighted fields.", fieldErrors };
+  }
+  const data = parsed.data;
+  await prisma.campaign.update({
+    where: { id },
+    data: {
+      name: data.name,
+      description: data.description ?? null,
+      goalAmount: data.goalAmount != null ? new Prisma.Decimal(data.goalAmount) : null,
+      centerId: data.centerId || null,
+      active: data.active,
+    },
+  });
+  revalidatePath("/settings/campaigns");
+  return { ok: true, id };
+}
+
+export async function setCampaignActive(id: string, active: boolean) {
+  const me = await requireOrgAdmin();
+  const existing = await prisma.campaign.findUnique({ where: { id } });
+  if (!existing || existing.organizationId !== me.organizationId) return { ok: false };
+  await prisma.campaign.update({ where: { id }, data: { active } });
+  revalidatePath("/settings/campaigns");
+  return { ok: true };
+}
