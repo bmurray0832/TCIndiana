@@ -39,8 +39,9 @@ const sections: NavSection[] = [
     label: "Giving",
     items: [
       { href: "/donations", label: "Donations", icon: DollarSign },
+      { href: "/reports/executive", label: "Executive Report", icon: FileBarChart },
       { href: "/reports/monthly", label: "Monthly Report", icon: FileBarChart },
-      { href: "/reports", label: "Reports", icon: FileBarChart },
+      { href: "/reports", label: "All reports", icon: FileBarChart },
     ],
   },
   {

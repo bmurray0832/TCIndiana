@@ -5,6 +5,12 @@ type Report = { name: string; phase: string; href?: string; description: string 
 
 const REPORTS: Report[] = [
   {
+    name: "Executive Report",
+    phase: "Director one-pager",
+    href: "/reports/executive",
+    description: "Month / Quarter / Year snapshot with deltas, top campaigns, biggest supporters, attention list, and recent conversions. Print-friendly.",
+  },
+  {
     name: "Monthly Donation Report",
     phase: "Phase 1",
     href: "/reports/monthly",

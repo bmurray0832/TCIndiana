@@ -168,6 +168,193 @@ export async function dashboardMetrics() {
   };
 }
 
+/** Leadership view: YoY, monthly trend, campaign progress, pipeline,
+ *  and per-center performance. Lives separately so the original
+ *  dashboardMetrics() stays focused. */
+export async function leadershipMetrics() {
+  const centerIds = await getAccessibleCenterIds();
+  const me = await getCurrentUser();
+  if (centerIds.length === 0 || !me) {
+    return null;
+  }
+
+  const now = new Date();
+  const thisYear = now.getFullYear();
+  const yearStart = new Date(thisYear, 0, 1);
+  const lastYearStart = new Date(thisYear - 1, 0, 1);
+  const sameDayLastYear = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+  const monthStart = new Date(thisYear, now.getMonth(), 1);
+  const lastMonthStart = new Date(thisYear, now.getMonth() - 1, 1);
+
+  const where = { centerId: { in: centerIds } };
+
+  // YTD vs same period last year (apples-to-apples through today's date).
+  const [ytdAgg, ytdLastYearAgg, lastFullYearAgg, monthAgg, lastMonthAgg] = await Promise.all([
+    prisma.donation.aggregate({
+      where: { ...where, date: { gte: yearStart } },
+      _sum: { amount: true },
+      _count: true,
+    }),
+    prisma.donation.aggregate({
+      where: { ...where, date: { gte: lastYearStart, lte: sameDayLastYear } },
+      _sum: { amount: true },
+      _count: true,
+    }),
+    prisma.donation.aggregate({
+      where: { ...where, date: { gte: lastYearStart, lt: yearStart } },
+      _sum: { amount: true },
+    }),
+    prisma.donation.aggregate({
+      where: { ...where, date: { gte: monthStart } },
+      _sum: { amount: true },
+      _count: true,
+    }),
+    prisma.donation.aggregate({
+      where: { ...where, date: { gte: lastMonthStart, lt: monthStart } },
+      _sum: { amount: true },
+    }),
+  ]);
+
+  const ytd = Number(ytdAgg._sum.amount ?? 0);
+  const ytdLastYear = Number(ytdLastYearAgg._sum.amount ?? 0);
+  const lastFullYear = Number(lastFullYearAgg._sum.amount ?? 0);
+  const monthTotal = Number(monthAgg._sum.amount ?? 0);
+  const lastMonthTotal = Number(lastMonthAgg._sum.amount ?? 0);
+
+  // 12-month bar chart data — group donations by month.
+  const twelveMonthsAgo = new Date(thisYear, now.getMonth() - 11, 1);
+  const allRecent = await prisma.donation.findMany({
+    where: { ...where, date: { gte: twelveMonthsAgo } },
+    select: { date: true, amount: true },
+  });
+  const buckets: { label: string; total: number; month: number; year: number }[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(thisYear, now.getMonth() - i, 1);
+    buckets.push({
+      label: d.toLocaleDateString("en-US", { month: "short" }),
+      total: 0,
+      month: d.getMonth(),
+      year: d.getFullYear(),
+    });
+  }
+  for (const d of allRecent) {
+    const m = d.date.getMonth();
+    const y = d.date.getFullYear();
+    const bucket = buckets.find((b) => b.month === m && b.year === y);
+    if (bucket) bucket.total += Number(d.amount);
+  }
+
+  // Campaign progress — top 6 by raised this year.
+  const campaigns = await prisma.campaign.findMany({
+    where: {
+      organizationId: me.organizationId,
+      active: true,
+      OR: [{ centerId: null }, { centerId: { in: centerIds } }],
+    },
+  });
+  const campaignProgress = await Promise.all(
+    campaigns.map(async (c) => {
+      const agg = await prisma.donation.aggregate({
+        where: { ...where, campaignId: c.id, date: { gte: yearStart } },
+        _sum: { amount: true },
+        _count: true,
+      });
+      return {
+        id: c.id,
+        name: c.name,
+        goal: c.goalAmount ? Number(c.goalAmount) : null,
+        raised: Number(agg._sum.amount ?? 0),
+        count: agg._count,
+      };
+    }),
+  );
+  campaignProgress.sort((a, b) => b.raised - a.raised);
+
+  // Pipeline + new donors + retention. Reuse the in-memory people list
+  // (already filtered by accessible centers).
+  const people = await listPeople({ kind: "all" });
+  const cold = people.filter((p) => !p.convertedToDonorAt && p.interestLevel === "COLD").length;
+  const warm = people.filter((p) => !p.convertedToDonorAt && p.interestLevel === "WARM").length;
+  const hot = people.filter((p) => !p.convertedToDonorAt && p.interestLevel === "HOT").length;
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+  const recentConversions = people.filter(
+    (p) => p.convertedToDonorAt && new Date(p.convertedToDonorAt) >= ninetyDaysAgo,
+  ).length;
+  const newDonorsThisMonth = people.filter(
+    (p) => p.convertedToDonorAt && new Date(p.convertedToDonorAt) >= monthStart,
+  ).length;
+
+  // Retention: donors who gave last year and have also given this year.
+  const lastYearDonorIds = await prisma.donation.findMany({
+    where: { ...where, date: { gte: lastYearStart, lt: yearStart } },
+    distinct: ["personId"],
+    select: { personId: true },
+  });
+  const thisYearDonorIdSet = new Set(
+    (
+      await prisma.donation.findMany({
+        where: { ...where, date: { gte: yearStart } },
+        distinct: ["personId"],
+        select: { personId: true },
+      })
+    ).map((r) => r.personId),
+  );
+  const cohortSize = lastYearDonorIds.length;
+  const retainedCount = lastYearDonorIds.filter((r) => thisYearDonorIdSet.has(r.personId)).length;
+  const retentionRate = cohortSize > 0 ? Math.round((retainedCount / cohortSize) * 100) : 0;
+
+  // Per-center YTD breakdown.
+  const accessibleCenters = await prisma.center.findMany({
+    where: { id: { in: centerIds } },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
+  const centerBreakdown = await Promise.all(
+    accessibleCenters.map(async (c) => {
+      const [thisYearAgg, lastYearAgg] = await Promise.all([
+        prisma.donation.aggregate({
+          where: { centerId: c.id, date: { gte: yearStart } },
+          _sum: { amount: true },
+          _count: true,
+        }),
+        prisma.donation.aggregate({
+          where: { centerId: c.id, date: { gte: lastYearStart, lte: sameDayLastYear } },
+          _sum: { amount: true },
+        }),
+      ]);
+      const t = Number(thisYearAgg._sum.amount ?? 0);
+      const ly = Number(lastYearAgg._sum.amount ?? 0);
+      return {
+        id: c.id,
+        name: c.name,
+        ytd: t,
+        ytdLastYear: ly,
+        change: ly > 0 ? Math.round(((t - ly) / ly) * 100) : null,
+        count: thisYearAgg._count,
+      };
+    }),
+  );
+
+  return {
+    ytd,
+    ytdLastYear,
+    ytdChange: ytdLastYear > 0 ? Math.round(((ytd - ytdLastYear) / ytdLastYear) * 100) : null,
+    lastFullYear,
+    monthTotal,
+    lastMonthTotal,
+    monthChange: lastMonthTotal > 0 ? Math.round(((monthTotal - lastMonthTotal) / lastMonthTotal) * 100) : null,
+    monthlyTrend: buckets,
+    campaignProgress: campaignProgress.slice(0, 6),
+    pipeline: { cold, warm, hot, recentConversions },
+    newDonorsThisMonth,
+    retentionRate,
+    cohortSize,
+    retainedCount,
+    centerBreakdown,
+    centerCount: accessibleCenters.length,
+  };
+}
+
 export async function currentUserSummary() {
   const me = await getCurrentUser();
   const centerIds = await getAccessibleCenterIds();
