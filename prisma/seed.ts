@@ -148,13 +148,38 @@ function mapPayment(v: string | null) {
   }
 }
 
+async function wipe() {
+  console.log("🧹 Wiping existing data");
+  await prisma.auditLog.deleteMany();
+  await prisma.followUp.deleteMany();
+  await prisma.contact.deleteMany();
+  await prisma.donation.deleteMany();
+  await prisma.campaign.deleteMany();
+  await prisma.person.deleteMany();
+  await prisma.userCenterRole.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.center.deleteMany();
+  await prisma.bloomerangImport.deleteMany();
+  await prisma.organization.deleteMany();
+}
+
 async function main() {
-  console.log(`📂 Loading workbook from ${XLSX_PATH}`);
   if (!fs.existsSync(XLSX_PATH)) {
-    console.error(`\n✗ Could not find ${XLSX_PATH}.`);
-    console.error(`  Set CRM_XLSX_PATH or copy the spreadsheet to the repo root.\n`);
-    process.exit(1);
+    console.log(`📂 No spreadsheet at ${XLSX_PATH}`);
+    console.log(`   Falling back to synthetic data. Set CRM_XLSX_PATH to use a workbook.\n`);
+    await wipe();
+    const { seedSynthetic } = await import("./seed-synthetic");
+    const summary = await seedSynthetic(prisma);
+    console.log("\n✓ Seed complete");
+    console.log(`   Organization: ${summary.org.name}`);
+    console.log(`   People: ${summary.prospectCount + summary.donorCount}`);
+    console.log(`   Donations: ${summary.donationCount}`);
+    console.log(`   Contacts: ${summary.contactCount}`);
+    console.log(`\n   Log in as: ${summary.director.email}`);
+    return;
   }
+
+  console.log(`📂 Loading workbook from ${XLSX_PATH}`);
   const wb = XLSX.readFile(XLSX_PATH, { cellDates: true });
 
   // Helper to read a sheet starting at the header row that contains "ID"
@@ -169,17 +194,7 @@ async function main() {
     return XLSX.utils.sheet_to_json<Row>(ws, { range: headerRow - 1, defval: null });
   }
 
-  console.log("🧹 Wiping existing data");
-  await prisma.auditLog.deleteMany();
-  await prisma.followUp.deleteMany();
-  await prisma.contact.deleteMany();
-  await prisma.donation.deleteMany();
-  await prisma.campaign.deleteMany();
-  await prisma.person.deleteMany();
-  await prisma.userCenterRole.deleteMany();
-  await prisma.user.deleteMany();
-  await prisma.center.deleteMany();
-  await prisma.organization.deleteMany();
+  await wipe();
 
   console.log("🏢 Creating organization + centers");
   const org = await prisma.organization.create({
