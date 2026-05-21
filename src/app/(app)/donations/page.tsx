@@ -1,8 +1,7 @@
 import { PageHeader } from "@/components/PageHeader";
-import { DonationsTable } from "@/components/tables/DonationsTable";
+import { DonationsPageBody } from "@/components/pages/DonationsPageBody";
 import { prisma } from "@/lib/prisma";
 import { getAccessibleCenterIds, getCurrentUser } from "@/lib/auth";
-import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -28,14 +27,13 @@ export default async function DonationsPage() {
       : Promise.resolve([]),
   ]);
 
-  const total = donations.reduce((s, d) => s + Number(d.amount), 0);
   return (
     <div className="p-6">
       <PageHeader
         title="Donations"
-        subtitle={`${donations.length} entries · ${formatCurrency(total)} shown`}
+        subtitle="Click a card below to focus the table."
       />
-      <DonationsTable donations={donations} campaigns={campaigns.map((c) => c.name)} />
+      <DonationsPageBody donations={donations} campaigns={campaigns.map((c) => c.name)} />
     </div>
   );
 }

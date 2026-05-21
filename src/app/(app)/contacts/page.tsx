@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/PageHeader";
-import { ContactLogTable } from "@/components/tables/ContactLogTable";
+import { ContactsPageBody } from "@/components/pages/ContactsPageBody";
 import { prisma } from "@/lib/prisma";
 import { getAccessibleCenterIds } from "@/lib/auth";
 
@@ -19,8 +19,11 @@ export default async function ContactsPage() {
 
   return (
     <div className="p-6">
-      <PageHeader title="Contact Log" subtitle={`${contacts.length} most-recent entries`} />
-      <ContactLogTable contacts={contacts} />
+      <PageHeader
+        title="Contact Log"
+        subtitle="Click a card below to focus the log."
+      />
+      <ContactsPageBody contacts={contacts} />
     </div>
   );
 }

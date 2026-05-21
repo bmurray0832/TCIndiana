@@ -18,7 +18,17 @@ const TYPE_OPTIONS = [
   { value: "Prospect", label: "Prospect" },
 ];
 
-export function FollowUpsTable({ people, centerNames }: { people: PersonWithAlert[]; centerNames: string[] }) {
+export function FollowUpsTable({
+  people,
+  centerNames,
+  filters,
+  onFiltersChange,
+}: {
+  people: PersonWithAlert[];
+  centerNames: string[];
+  filters?: Record<string, string>;
+  onFiltersChange?: (filters: Record<string, string>) => void;
+}) {
   const centerOptions = centerNames.map((n) => ({ value: n, label: n }));
 
   const columns: DataTableColumn<PersonWithAlert>[] = [
@@ -103,6 +113,8 @@ export function FollowUpsTable({ people, centerNames }: { people: PersonWithAler
       defaultSort={{ key: "alert", direction: "desc" }}
       rowKey={(r) => r.id}
       emptyMessage="Empty queue — everybody is current. 🎉"
+      filters={filters}
+      onFiltersChange={onFiltersChange}
     />
   );
 }

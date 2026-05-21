@@ -33,6 +33,12 @@ type Props<T> = {
   defaultSort?: { key: string; direction: SortDirection };
   emptyMessage?: string;
   rowKey: (row: T) => string;
+  /** Controlled filter state. When provided, the table calls
+   *  `onFiltersChange` instead of managing its own. Lets a parent (e.g.
+   *  KPI quick-filter cards) drive the table. Filter values may be
+   *  comma-separated for OR matching, e.g. "RED,ORANGE". */
+  filters?: Record<string, string>;
+  onFiltersChange?: (filters: Record<string, string>) => void;
 };
 
 function compare(a: unknown, b: unknown): number {
@@ -51,9 +57,17 @@ export function DataTable<T>({
   defaultSort,
   emptyMessage = "No rows.",
   rowKey,
+  filters: controlledFilters,
+  onFiltersChange,
 }: Props<T>) {
   const [query, setQuery] = useState("");
-  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [internalFilters, setInternalFilters] = useState<Record<string, string>>({});
+  const filters = controlledFilters ?? internalFilters;
+  const setFilters = (next: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => {
+    const resolved = typeof next === "function" ? next(filters) : next;
+    if (onFiltersChange) onFiltersChange(resolved);
+    else setInternalFilters(resolved);
+  };
   const [sort, setSort] = useState<{ key: string; direction: SortDirection } | null>(defaultSort ?? null);
 
   const searchSet = searchKeys ?? columns.map((c) => c.key);
@@ -80,7 +94,10 @@ export function DataTable<T>({
         if (!col) continue;
         const cellValue = col.accessor(row);
         if (cellValue === null || cellValue === undefined) return false;
-        if (String(cellValue) !== v) return false;
+        // Comma-separated values act as OR. Lets quick-filter cards
+        // supply multi-value filters (e.g. alert=RED,ORANGE).
+        const allowed = v.split(",").map((s) => s.trim()).filter(Boolean);
+        if (!allowed.includes(String(cellValue))) return false;
       }
       return true;
     });

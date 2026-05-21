@@ -34,7 +34,15 @@ const OUTCOME_OPTIONS = [
   { value: "OTHER", label: "Other" },
 ];
 
-export function ContactLogTable({ contacts }: { contacts: ContactRow[] }) {
+export function ContactLogTable({
+  contacts,
+  filters,
+  onFiltersChange,
+}: {
+  contacts: ContactRow[];
+  filters?: Record<string, string>;
+  onFiltersChange?: (filters: Record<string, string>) => void;
+}) {
   const columns: DataTableColumn<ContactRow>[] = [
     {
       key: "date",
@@ -94,6 +102,8 @@ export function ContactLogTable({ contacts }: { contacts: ContactRow[] }) {
       defaultSort={{ key: "date", direction: "desc" }}
       rowKey={(r) => r.id}
       emptyMessage="No contacts match your filters."
+      filters={filters}
+      onFiltersChange={onFiltersChange}
     />
   );
 }

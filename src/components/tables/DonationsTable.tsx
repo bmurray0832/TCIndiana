@@ -23,7 +23,17 @@ const PAYMENT_OPTIONS = [
   { value: "BANK_TRANSFER", label: "Bank transfer" },
 ];
 
-export function DonationsTable({ donations, campaigns }: { donations: DonationRow[]; campaigns: string[] }) {
+export function DonationsTable({
+  donations,
+  campaigns,
+  filters,
+  onFiltersChange,
+}: {
+  donations: DonationRow[];
+  campaigns: string[];
+  filters?: Record<string, string>;
+  onFiltersChange?: (filters: Record<string, string>) => void;
+}) {
   const campaignOptions = [
     { value: "", label: "—" },
     ...campaigns.map((c) => ({ value: c, label: c })),
@@ -98,6 +108,8 @@ export function DonationsTable({ donations, campaigns }: { donations: DonationRo
       defaultSort={{ key: "date", direction: "desc" }}
       rowKey={(r) => r.id}
       emptyMessage="No donations match your filters."
+      filters={filters}
+      onFiltersChange={onFiltersChange}
     />
   );
 }

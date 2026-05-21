@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/PageHeader";
-import { FollowUpsTable } from "@/components/tables/FollowUpsTable";
+import { FollowUpsPageBody } from "@/components/pages/FollowUpsPageBody";
 import { listPeople, currentUserSummary } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
@@ -12,9 +12,9 @@ export default async function FollowUpsPage() {
     <div className="p-6">
       <PageHeader
         title="Follow-Up Queue"
-        subtitle={`${queue.length} action items · sort and filter to focus the queue`}
+        subtitle="Click a card below to focus the queue by urgency or by type."
       />
-      <FollowUpsTable people={queue} centerNames={me.centers.map((c) => c.name)} />
+      <FollowUpsPageBody people={queue} centerNames={me.centers.map((c) => c.name)} />
     </div>
   );
 }

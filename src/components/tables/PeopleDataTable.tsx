@@ -32,10 +32,14 @@ export function PeopleDataTable({
   people,
   variant,
   centerNames,
+  filters,
+  onFiltersChange,
 }: {
   people: PersonWithAlert[];
   variant: Variant;
   centerNames: string[];
+  filters?: Record<string, string>;
+  onFiltersChange?: (filters: Record<string, string>) => void;
 }) {
   const centerOptions = centerNames.map((n) => ({ value: n, label: n }));
 
@@ -174,6 +178,8 @@ export function PeopleDataTable({
       }
       rowKey={(r) => r.id}
       emptyMessage={`No ${variant === "donor" ? "donors" : "prospects"} match your filters.`}
+      filters={filters}
+      onFiltersChange={onFiltersChange}
     />
   );
 }

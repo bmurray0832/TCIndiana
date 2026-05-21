@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/PageHeader";
-import { PeopleDataTable } from "@/components/tables/PeopleDataTable";
+import { ProspectsPageBody } from "@/components/pages/ProspectsPageBody";
 import { NewPersonButton } from "@/components/NewPersonButton";
 import { listPeople, currentUserSummary } from "@/lib/queries";
 
@@ -10,19 +10,15 @@ export default async function ProspectsPage() {
     listPeople({ kind: "prospect" }),
     currentUserSummary(),
   ]);
-  const hot = people.filter((p) => p.interestLevel === "HOT").length;
-  const warm = people.filter((p) => p.interestLevel === "WARM").length;
-  const cold = people.filter((p) => p.interestLevel === "COLD").length;
-  const red = people.filter((p) => p.alertColor === "RED").length;
 
   return (
     <div className="p-6">
       <PageHeader
         title="Prospects"
-        subtitle={`${people.length} total · ${hot} hot · ${warm} warm · ${cold} cold · ${red} going cold`}
+        subtitle="Click a card below to focus the table. Use search and column filters to drill deeper."
         actions={<NewPersonButton centers={me.centers} variant="prospect" />}
       />
-      <PeopleDataTable people={people} variant="prospect" centerNames={me.centers.map((c) => c.name)} />
+      <ProspectsPageBody people={people} centerNames={me.centers.map((c) => c.name)} />
     </div>
   );
 }
