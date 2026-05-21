@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/PageHeader";
-import { PeopleTable } from "@/components/PeopleTable";
+import { PeopleDataTable } from "@/components/tables/PeopleDataTable";
 import { NewPersonButton } from "@/components/NewPersonButton";
 import { listPeople, currentUserSummary } from "@/lib/queries";
 
@@ -22,7 +22,7 @@ export default async function ProspectsPage() {
         subtitle={`${people.length} total · ${hot} hot · ${warm} warm · ${cold} cold · ${red} going cold`}
         actions={<NewPersonButton centers={me.centers} variant="prospect" />}
       />
-      <PeopleTable people={people} variant="prospect" />
+      <PeopleDataTable people={people} variant="prospect" centerNames={me.centers.map((c) => c.name)} />
     </div>
   );
 }

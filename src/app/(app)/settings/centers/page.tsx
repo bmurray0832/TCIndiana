@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { CentersList } from "@/components/settings/CentersList";
 import { prisma } from "@/lib/prisma";
@@ -20,15 +19,12 @@ export default async function CentersSettingsPage() {
   const canCreate = me.orgRole === "ORG_ADMIN";
 
   return (
-    <div className="p-6">
-      <Link href="/settings" className="mb-3 inline-block text-xs text-muted-foreground hover:text-primary">
-        ← Back to settings
-      </Link>
+    <>
       <PageHeader
         title="Centers"
         subtitle={`${centers.length} centers · HQ admins set org-wide defaults; directors override per center`}
       />
       <CentersList centers={centers} orgDefaults={orgDefaults} canCreate={canCreate} />
-    </div>
+    </>
   );
 }

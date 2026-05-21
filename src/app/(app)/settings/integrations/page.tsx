@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Mail, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { prisma } from "@/lib/prisma";
@@ -23,10 +22,7 @@ export default async function IntegrationsPage({
   const outlookConfigured = isMsGraphConfigured();
 
   return (
-    <div className="p-6">
-      <Link href="/settings" className="mb-3 inline-block text-xs text-muted-foreground hover:text-primary">
-        ← Back to settings
-      </Link>
+    <>
       <PageHeader
         title="Email integrations"
         subtitle="Connect your work mailbox so emails sent from the CRM come from your address and replies land in your inbox."
@@ -116,6 +112,6 @@ export default async function IntegrationsPage({
         When no mailbox is connected, the &ldquo;Send email&rdquo; composer falls back to a shared TC Indiana
         address via Resend.
       </p>
-    </div>
+    </>
   );
 }

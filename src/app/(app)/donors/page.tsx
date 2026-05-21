@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/PageHeader";
-import { PeopleTable } from "@/components/PeopleTable";
+import { PeopleDataTable } from "@/components/tables/PeopleDataTable";
 import { NewPersonButton } from "@/components/NewPersonButton";
 import { listPeople, currentUserSummary } from "@/lib/queries";
 import { formatCurrency } from "@/lib/utils";
@@ -21,7 +21,7 @@ export default async function DonorsPage() {
         subtitle={`${people.length} total · ${red} need attention · ${formatCurrency(totalLifetime)} lifetime giving`}
         actions={<NewPersonButton centers={me.centers} variant="donor" />}
       />
-      <PeopleTable people={people} variant="donor" />
+      <PeopleDataTable people={people} variant="donor" centerNames={me.centers.map((c) => c.name)} />
     </div>
   );
 }
