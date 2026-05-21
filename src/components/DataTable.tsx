@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Search, ArrowUpDown, ArrowUp, ArrowDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +39,11 @@ type Props<T> = {
    *  comma-separated for OR matching, e.g. "RED,ORANGE". */
   filters?: Record<string, string>;
   onFiltersChange?: (filters: Record<string, string>) => void;
+  /** Optional inline expansion panel for each row. When supplied, clicking
+   *  a row toggles a second tr that spans all columns. Interactive
+   *  children (links, action buttons) should call `stopPropagation` to
+   *  avoid toggling the row. */
+  expandedContent?: (row: T) => React.ReactNode;
 };
 
 function compare(a: unknown, b: unknown): number {
@@ -59,9 +64,11 @@ export function DataTable<T>({
   rowKey,
   filters: controlledFilters,
   onFiltersChange,
+  expandedContent,
 }: Props<T>) {
   const [query, setQuery] = useState("");
   const [internalFilters, setInternalFilters] = useState<Record<string, string>>({});
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const filters = controlledFilters ?? internalFilters;
   const setFilters = (next: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => {
     const resolved = typeof next === "function" ? next(filters) : next;
@@ -218,21 +225,50 @@ export function DataTable<T>({
                   </td>
                 </tr>
               ) : (
-                sorted.map((row) => (
-                  <tr key={rowKey(row)} className="hover:bg-muted/30">
-                    {columns.map((c) => {
-                      const v = c.accessor(row);
-                      return (
-                        <td
-                          key={c.key}
-                          className={cn("px-4 py-2", c.align === "right" && "text-right", c.className)}
-                        >
-                          {c.cell ? c.cell(row) : v === null || v === undefined ? "—" : String(v)}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))
+                sorted.map((row) => {
+                  const key = rowKey(row);
+                  const isExpanded = expanded.has(key);
+                  const toggleRow = () => {
+                    if (!expandedContent) return;
+                    setExpanded((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(key)) next.delete(key);
+                      else next.add(key);
+                      return next;
+                    });
+                  };
+                  return (
+                    <Fragment key={key}>
+                      <tr
+                        className={cn(
+                          "hover:bg-muted/30",
+                          expandedContent && "cursor-pointer",
+                          isExpanded && "bg-muted/20",
+                        )}
+                        onClick={expandedContent ? toggleRow : undefined}
+                      >
+                        {columns.map((c) => {
+                          const v = c.accessor(row);
+                          return (
+                            <td
+                              key={c.key}
+                              className={cn("px-4 py-2", c.align === "right" && "text-right", c.className)}
+                            >
+                              {c.cell ? c.cell(row) : v === null || v === undefined ? "—" : String(v)}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                      {expandedContent && isExpanded && (
+                        <tr className="bg-muted/10">
+                          <td colSpan={columns.length} className="px-4 py-3">
+                            {expandedContent(row)}
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })
               )}
             </tbody>
           </table>

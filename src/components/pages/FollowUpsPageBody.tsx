@@ -8,9 +8,11 @@ import type { PersonWithAlert } from "@/lib/queries";
 export function FollowUpsPageBody({
   people,
   centerNames,
+  campaignsByCenter,
 }: {
   people: PersonWithAlert[];
   centerNames: string[];
+  campaignsByCenter: Record<string, { id: string; name: string }[]>;
 }) {
   const [filters, setFilters] = useState<Record<string, string>>({});
 
@@ -35,6 +37,7 @@ export function FollowUpsPageBody({
       <FollowUpsTable
         people={people}
         centerNames={centerNames}
+        campaignsByCenter={campaignsByCenter}
         filters={filters}
         onFiltersChange={setFilters}
       />

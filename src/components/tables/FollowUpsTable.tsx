@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { AlertBadge } from "@/components/AlertBadge";
-import { SnoozeMenu } from "@/components/SnoozeMenu";
+import { FollowUpRowActions } from "@/components/FollowUpRowActions";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { PersonWithAlert } from "@/lib/queries";
@@ -18,18 +18,29 @@ const TYPE_OPTIONS = [
   { value: "Prospect", label: "Prospect" },
 ];
 
+const dialable = (phone: string) => phone.replace(/[^+\d]/g, "");
+
 export function FollowUpsTable({
   people,
   centerNames,
+  campaignsByCenter,
   filters,
   onFiltersChange,
 }: {
   people: PersonWithAlert[];
   centerNames: string[];
+  /** Active campaigns the current user can attribute donations to,
+   *  keyed by `centerId`. `"_org"` holds org-wide (centerId=null) campaigns. */
+  campaignsByCenter: Record<string, { id: string; name: string }[]>;
   filters?: Record<string, string>;
   onFiltersChange?: (filters: Record<string, string>) => void;
 }) {
   const centerOptions = centerNames.map((n) => ({ value: n, label: n }));
+
+  const campaignsFor = (person: PersonWithAlert) => [
+    ...(campaignsByCenter["_org"] ?? []),
+    ...(campaignsByCenter[person.centerId] ?? []),
+  ];
 
   const columns: DataTableColumn<PersonWithAlert>[] = [
     {
@@ -38,7 +49,11 @@ export function FollowUpsTable({
       accessor: (r) => `${r.firstName} ${r.lastName}`,
       sortable: true,
       cell: (r) => (
-        <Link href={`/people/${r.id}`} className="font-medium hover:text-primary">
+        <Link
+          href={`/people/${r.id}`}
+          onClick={(e) => e.stopPropagation()}
+          className="font-medium hover:text-primary"
+        >
           {r.firstName} {r.lastName}
         </Link>
       ),
@@ -101,7 +116,7 @@ export function FollowUpsTable({
       accessor: () => null,
       sortable: false,
       align: "right",
-      cell: (r) => <SnoozeMenu personId={r.id} snoozedUntil={r.snoozedUntil} />,
+      cell: (r) => <FollowUpRowActions person={r} campaigns={campaignsFor(r)} />,
     },
   ];
 
@@ -115,6 +130,75 @@ export function FollowUpsTable({
       emptyMessage="Empty queue — everybody is current. 🎉"
       filters={filters}
       onFiltersChange={onFiltersChange}
+      expandedContent={(r) => <PersonCard person={r} />}
     />
+  );
+}
+
+function PersonCard({ person }: { person: PersonWithAlert }) {
+  const phone = person.phone?.trim();
+  const email = person.email?.trim();
+  return (
+    <div className="grid gap-4 sm:grid-cols-3">
+      <Field label="Phone">
+        {phone ? (
+          <div className="flex items-center gap-2">
+            <a href={`tel:${dialable(phone)}`} className="font-medium text-primary hover:underline">
+              {phone}
+            </a>
+            <a
+              href={`sms:${dialable(phone)}`}
+              className="rounded border border-border bg-card px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground hover:bg-muted"
+            >
+              Text
+            </a>
+          </div>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </Field>
+      <Field label="Email">
+        {email ? (
+          <a href={`mailto:${email}`} className="font-medium text-primary hover:underline">
+            {email}
+          </a>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </Field>
+      <Field label="Preferred">
+        <span>{person.preferredContact?.replace(/_/g, "-").toLowerCase() ?? "—"}</span>
+      </Field>
+      <div className="sm:col-span-3">
+        <Field label="Notes">
+          {person.notes ? (
+            <p className="whitespace-pre-wrap text-sm">{person.notes}</p>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
+        </Field>
+      </div>
+      <div className="sm:col-span-3 text-xs text-muted-foreground">
+        Open the full card →{" "}
+        <Link
+          href={`/people/${person.id}`}
+          onClick={(e) => e.stopPropagation()}
+          className="font-medium text-primary hover:underline"
+        >
+          {person.firstName} {person.lastName}
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="text-sm">
+      <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </div>
+      <div className="mt-0.5">{children}</div>
+    </div>
   );
 }
