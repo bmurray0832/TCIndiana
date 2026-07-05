@@ -1,5 +1,7 @@
 [deploy]
 healthcheckPath = "/login"
+# Apply pending Prisma migrations before each deploy goes live.
+preDeployCommand = "npx prisma migrate deploy"
 
 # Weekly digest — Monday 9 AM Eastern (14:00 UTC during standard time).
 # Each active user gets a personalised list of who to follow up with.
