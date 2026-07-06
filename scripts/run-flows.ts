@@ -55,7 +55,7 @@ async function findFirstRedRow(page: Page): Promise<string> {
   await page.fill("#nextFollowUpAt", "2026-05-26");
   await shot(page, "flow1-04-modal-filled", "Form filled — phone call, scheduled follow-up, real notes");
 
-  await page.getByRole("button", { name: /^Log contact$/i }).click();
+  await page.locator('[role="dialog"] button[type="submit"]').click();
   await page.waitForSelector('[role="dialog"]', { state: "detached" });
   await page.waitForLoadState("networkidle");
   await shot(page, "flow1-05-profile-after", "Same profile — new contact at top of history, Days Since reset to 0, alert flipped to Green");

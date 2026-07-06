@@ -13,6 +13,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (!session?.user) redirect("/login");
     const me = await getCurrentUser();
     if (!me) redirect("/access-pending");
+  } else if (process.env.NODE_ENV === "production") {
+    // Misconfigured production (Auth0 vars missing or typo'd): fail
+    // loudly at /login instead of serving an empty authed shell.
+    redirect("/login");
   }
 
   return <AppShell>{children}</AppShell>;
