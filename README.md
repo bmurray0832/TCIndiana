@@ -57,17 +57,17 @@ sign in as a different seeded user.
 
 | Phase | Status | Scope |
 | --- | --- | --- |
-| 0 | ✅ done | Bootstrap, schema, seed, read-only pages |
-| 0.5 | ✅ done | Auth0 with dev-mode fallback |
-| 1 | ✅ done | Write paths: log contact, add donation, add/edit person; Monthly Report |
-| 1.5 | ✅ done | Follow-up snooze, Campaign Performance, Biggest Supporters, Retention, Pipeline Funnel, YoY by Center reports |
-| 2 | ✅ done | Bloomerang CSV importer (Constituents / Transactions / Interactions) |
-| 2.5 | ✅ done | User + Center admin UI |
-| 3 | ✅ done | Stripe online giving (one-time + monthly, ACH, cover-fees) |
-| 4 | ✅ done | Email send + log via Resend (shared sender) |
-| 3.5 | ✅ done | Donor self-service portal (magic-link auth + Stripe Customer Portal) |
-| 4.5 | ✅ done | Per-user Outlook OAuth (send as me); Gmail pending in 4.6 |
-| 5 | ✅ done | Scheduled cron: weekly digest + monthly lapsed-donor email |
+| 0 | done | Bootstrap, schema, seed, read-only pages |
+| 0.5 | done | Auth0 with dev-mode fallback |
+| 1 | done | Write paths: log contact, add donation, add/edit person; Monthly Report |
+| 1.5 | done | Follow-up snooze, Campaign Performance, Biggest Supporters, Retention, Pipeline Funnel, YoY by Center reports |
+| 2 | done | Bloomerang CSV importer (Constituents / Transactions / Interactions) |
+| 2.5 | done | User + Center admin UI |
+| 3 | done | Stripe online giving (one-time + monthly, ACH, cover-fees) |
+| 4 | done | Email send + log via Resend (shared sender) |
+| 3.5 | done | Donor self-service portal (magic-link auth + Stripe Customer Portal) |
+| 4.5 | done | Per-user Outlook OAuth (send as me); Gmail pending in 4.6 |
+| 5 | done | Scheduled cron: weekly digest + monthly lapsed-donor email |
 | 4.6 | later | Gmail OAuth equivalent of 4.5 |
 | 4.7 | later | Inbound auto-log of email replies via Graph subscriptions |
 

@@ -27,13 +27,13 @@ monthly report automatically. No one re-opens the Excel file.
 
 | Need | Bloomerang | This app |
 | --- | --- | --- |
-| Track existing donors | ✅ | ✅ |
-| Track **prospects** (not yet given) | ❌ | ✅ — first-class entity with Hot/Warm/Cold rating and pipeline stages |
-| Sales-style next-step queue | ❌ | ✅ — Follow-Up Queue + per-record "Next Step" field |
-| Days-since-contact alerts (Green/Yellow/Orange/Red) | partial | ✅ — drives the whole dashboard |
-| Multi-center segmentation | weak | ✅ — every record belongs to a Center, users scoped per Center |
-| Online giving with center designation | extra cost | ✅ — Stripe, fund/center routed automatically |
-| Customizable for TC's specific workflow | locked | ✅ — it's ours |
+| Track existing donors | yes | yes |
+| Track **prospects** (not yet given) | no | yes — first-class entity with Hot/Warm/Cold rating and pipeline stages |
+| Sales-style next-step queue | no | yes — Follow-Up Queue + per-record "Next Step" field |
+| Days-since-contact alerts (Green/Yellow/Orange/Red) | partial | yes — drives the whole dashboard |
+| Multi-center segmentation | weak | yes — every record belongs to a Center, users scoped per Center |
+| Online giving with center designation | extra cost | yes — Stripe, fund/center routed automatically |
+| Customizable for TC's specific workflow | locked | yes — it's ours |
 
 ## 3. Stack and shape
 
@@ -298,7 +298,7 @@ platform. Replacing that piece is half the value of this project.
    with `convertedToDonorAt = now`, `source = Online`. Either way, log a
    Contact with `contactType = Online`, `outcome = Made Donation`.
 4. If a Prospect gives, the conversion happens automatically and a
-   dashboard celebration alert fires ("🎉 P007 Rebecca Perry just
+   dashboard celebration alert fires ("P007 Rebecca Perry just
    converted — \$500 to Capital Campaign").
 
 ### Donor portal (`/portal`)
@@ -444,11 +444,11 @@ without it. Until then, the value is in the plan, not in the code.
 
 ## 14. Resolved decisions
 
-- ✅ **Donation page URL**: subpath on `tcindiana.org/give/[centerSlug]`,
+- **Donation page URL**: subpath on `tcindiana.org/give/[centerSlug]`,
   not a separate domain
-- ✅ **Alert threshold ownership**: HQ (org_admin) sets org defaults;
+- **Alert threshold ownership**: HQ (org_admin) sets org defaults;
   center directors override for their own center; staff read-only
-- ✅ **Roles model**: HQ-controlled + center-leader override pattern,
+- **Roles model**: HQ-controlled + center-leader override pattern,
   mirroring holy-insights' church-admin / campus-admin split
 
 ## 15. Open questions to resolve

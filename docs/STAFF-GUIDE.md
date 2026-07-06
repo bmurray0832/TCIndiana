@@ -22,10 +22,10 @@ been created yet — ask your admin to add you in Settings → Users.
 
 | Color | Meaning |
 | --- | --- |
-| 🟢 Green | Recently contacted — no action needed |
-| 🟡 Yellow | Getting stale — contact soon |
-| 🟠 Orange | Overdue — prioritize this week |
-| 🔴 Red | Seriously overdue — contact today |
+| Green | Recently contacted — no action needed |
+| Yellow | Getting stale — contact soon |
+| Orange | Overdue — prioritize this week |
+| Red | Seriously overdue — contact today |
 
 Donors and prospects run on different clocks (a prospect goes red in
 weeks; a donor in months). Logging any contact resets the clock to
