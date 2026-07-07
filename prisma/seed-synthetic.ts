@@ -67,7 +67,7 @@ function daysAgo(d: number): Date {
 }
 
 export async function seedSynthetic(prisma: PrismaClient) {
-  console.log("🌱 Loading synthetic seed data");
+  console.log("Loading synthetic seed data");
 
   const org = await prisma.organization.create({
     data: { name: "Teen Challenge Indiana", slug: "tc-indiana" },
@@ -84,7 +84,7 @@ export async function seedSynthetic(prisma: PrismaClient) {
   }
   const mainCenterId = centers["Main Center"];
 
-  console.log("👥 Staff users");
+  console.log("Staff users");
   const staffNames = ["John Smith", "Sarah Johnson", "Michael Brown", "Emily Davis"];
   const director = await prisma.user.create({
     data: {
@@ -111,7 +111,7 @@ export async function seedSynthetic(prisma: PrismaClient) {
     staffByName[name] = u.id;
   }
 
-  console.log("🎯 Campaigns");
+  console.log("Campaigns");
   const campaigns: Record<string, string> = {};
   const goals: Record<string, number> = {
     "Building Donation": 250000,
@@ -130,7 +130,7 @@ export async function seedSynthetic(prisma: PrismaClient) {
     campaigns[name] = c.id;
   }
 
-  console.log("💼 Prospects (15)");
+  console.log("Prospects (15)");
   const usedNames = new Set<string>();
   function uniqueName(): { first: string; last: string } {
     for (let i = 0; i < 40; i++) {
@@ -186,7 +186,7 @@ export async function seedSynthetic(prisma: PrismaClient) {
   }
   console.log(`  ✓ ${prospectCount} prospects`);
 
-  console.log("🤝 Donors (28) + donations + contact history");
+  console.log("Donors (28) + donations + contact history");
   let donorCount = 0;
   let donationCount = 0;
   let contactCount = 0;

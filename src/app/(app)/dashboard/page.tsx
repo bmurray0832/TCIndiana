@@ -91,7 +91,7 @@ export default async function DashboardPage() {
         <div className="rounded-lg border border-border bg-card">
           <header className="flex items-center justify-between border-b border-border px-4 py-2.5">
             <div>
-              <h2 className="text-sm font-semibold">⚠️ Needing attention</h2>
+              <h2 className="text-sm font-semibold">Needing attention</h2>
               <p className="text-[11px] text-muted-foreground">Red + Orange · top by lifetime giving</p>
             </div>
             <Link href="/follow-ups" className="text-xs font-medium text-primary hover:underline">

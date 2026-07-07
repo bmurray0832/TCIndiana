@@ -149,7 +149,7 @@ function mapPayment(v: string | null) {
 }
 
 async function wipe() {
-  console.log("🧹 Wiping existing data");
+  console.log("Wiping existing data");
   await prisma.auditLog.deleteMany();
   await prisma.followUp.deleteMany();
   await prisma.contact.deleteMany();
@@ -165,7 +165,7 @@ async function wipe() {
 
 async function main() {
   if (!fs.existsSync(XLSX_PATH)) {
-    console.log(`📂 No spreadsheet at ${XLSX_PATH}`);
+    console.log(`No spreadsheet at ${XLSX_PATH}`);
     console.log(`   Falling back to synthetic data. Set CRM_XLSX_PATH to use a workbook.\n`);
     await wipe();
     const { seedSynthetic } = await import("./seed-synthetic");
@@ -179,7 +179,7 @@ async function main() {
     return;
   }
 
-  console.log(`📂 Loading workbook from ${XLSX_PATH}`);
+  console.log(`Loading workbook from ${XLSX_PATH}`);
   const wb = XLSX.readFile(XLSX_PATH, { cellDates: true });
 
   // Helper to read a sheet starting at the header row that contains "ID"
@@ -196,7 +196,7 @@ async function main() {
 
   await wipe();
 
-  console.log("🏢 Creating organization + centers");
+  console.log("Creating organization + centers");
   const org = await prisma.organization.create({
     data: {
       name: "Teen Challenge Indiana",
@@ -219,7 +219,7 @@ async function main() {
   }
   const defaultCenterId = centersByName["Main Center"];
 
-  console.log("👥 Creating staff users");
+  console.log("Creating staff users");
   const refRows = readSheet("Reference Data", 1);
   const staffNames = refRows
     .map((r) => cell(r, "Staff Names"))
@@ -259,7 +259,7 @@ async function main() {
     usersByName[name] = u.id;
   }
 
-  console.log("🎯 Creating campaigns");
+  console.log("Creating campaigns");
   const campaignNames = new Set<string>();
   for (const r of refRows) {
     const c = cell(r, "Campaign Purpose");
@@ -273,7 +273,7 @@ async function main() {
     campaignsByName[name] = c.id;
   }
 
-  console.log("💼 Importing prospects");
+  console.log("Importing prospects");
   const prospectRows = readSheet("Prospects", 5);
   let prospectCount = 0;
   const peopleByName: Record<string, string> = {};
@@ -304,7 +304,7 @@ async function main() {
   }
   console.log(`  ✓ ${prospectCount} prospects`);
 
-  console.log("🤝 Importing donors");
+  console.log("Importing donors");
   const donorRows = readSheet("Donors", 5);
   let donorCount = 0;
   for (const r of donorRows) {
@@ -339,7 +339,7 @@ async function main() {
   }
   console.log(`  ✓ ${donorCount} donors`);
 
-  console.log("💵 Importing donations");
+  console.log("Importing donations");
   const donationRows = readSheet("Donations", 5);
   let donationCount = 0;
   for (const r of donationRows) {
@@ -369,7 +369,7 @@ async function main() {
   }
   console.log(`  ✓ ${donationCount} donations`);
 
-  console.log("📞 Importing contact log");
+  console.log("Importing contact log");
   const contactRows = readSheet("Contact Log", 5);
   let contactCount = 0;
   for (const r of contactRows) {

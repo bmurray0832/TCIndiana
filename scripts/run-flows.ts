@@ -14,7 +14,7 @@ fs.mkdirSync(OUT, { recursive: true });
 
 async function shot(page: Page, name: string, note?: string) {
   await page.screenshot({ path: path.join(OUT, `${name}.png`), fullPage: true });
-  console.log(`  📸 ${name}${note ? "  — " + note : ""}`);
+  console.log(`  ${name}${note ? "  — " + note : ""}`);
 }
 
 async function findFirstRedRow(page: Page): Promise<string> {

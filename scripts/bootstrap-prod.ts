@@ -51,7 +51,7 @@ async function main() {
     update: {},
     create: { name: orgName, slug: orgSlug },
   });
-  console.log(`🏢 Organization: ${org.name} (${org.slug})`);
+  console.log(`Organization: ${org.name} (${org.slug})`);
 
   const centerIds: string[] = [];
   for (const name of centerNames) {
@@ -87,7 +87,7 @@ async function main() {
       create: { userId: admin.id, centerId, role: "DIRECTOR" },
     });
   }
-  console.log(`👤 Admin: ${admin.email} (ORG_ADMIN, DIRECTOR on ${centerIds.length} center${centerIds.length === 1 ? "" : "s"})`);
+  console.log(`Admin: ${admin.email} (ORG_ADMIN, DIRECTOR on ${centerIds.length} center${centerIds.length === 1 ? "" : "s"})`);
   console.log("\nDone. Sign in via Auth0 with that email — you'll land on /dashboard.");
 }
 

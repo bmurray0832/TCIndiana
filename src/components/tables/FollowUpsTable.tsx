@@ -112,7 +112,7 @@ export function FollowUpsTable({
       searchPlaceholder="Search by name…"
       defaultSort={{ key: "alert", direction: "desc" }}
       rowKey={(r) => r.id}
-      emptyMessage="Empty queue — everybody is current. 🎉"
+      emptyMessage="Empty queue — everybody is current."
       filters={filters}
       onFiltersChange={onFiltersChange}
     />
