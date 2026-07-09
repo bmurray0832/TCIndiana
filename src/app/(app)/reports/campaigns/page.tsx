@@ -1,4 +1,6 @@
 import { PageHeader } from "@/components/PageHeader";
+import { BarList } from "@/components/reports/BarList";
+import { ReportActions } from "@/components/reports/ReportActions";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, getActiveCenterIds } from "@/lib/auth";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -44,12 +46,39 @@ export default async function CampaignsReportPage() {
 
   const grandTotal = stats.reduce((s, x) => s + x.total, 0);
 
+  const csvRows = stats.map(({ campaign, total, avg, count, lastGift }) => {
+    const goal = Number(campaign.goalAmount ?? 0);
+    return {
+      campaign: campaign.name,
+      raised: total,
+      goal: goal > 0 ? goal : null,
+      pctToGoal: goal > 0 ? Math.round((total / goal) * 100) : null,
+      gifts: count,
+      avgGift: avg,
+      lastGift: lastGift ? new Date(lastGift).toISOString().slice(0, 10) : null,
+    };
+  });
+
   return (
     <div className="p-6">
       <PageHeader
         title="Campaign Performance"
         subtitle={`${stats.length} campaigns · ${formatCurrency(grandTotal)} raised across all`}
+        actions={<ReportActions rows={csvRows} filename="campaign-performance" />}
       />
+
+      {stats.length > 0 && (
+        <div className="mb-6">
+          <BarList
+            title="Raised by campaign (top 8)"
+            items={stats.slice(0, 8).map((s) => ({
+              label: s.campaign.name,
+              value: s.total,
+              display: formatCurrency(s.total),
+            }))}
+          />
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-lg border border-border bg-card">
         <table className="w-full text-sm">

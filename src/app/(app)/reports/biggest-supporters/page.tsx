@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/PageHeader";
 import { BiggestSupportersTable } from "@/components/tables/BiggestSupportersTable";
+import { ReportActions } from "@/components/reports/ReportActions";
 import { listPeople, currentUserSummary } from "@/lib/queries";
 import { formatCurrency } from "@/lib/utils";
 
@@ -23,12 +24,25 @@ export default async function BiggestSupportersPage({
   const totalAll = donors.reduce((s, p) => s + Number(p.lifetimeAmount), 0);
   const sharePct = totalAll > 0 ? Math.round((totalShown / totalAll) * 100) : 0;
 
+  const csvRows = top.map((p, i) => ({
+    rank: i + 1,
+    firstName: p.firstName,
+    lastName: p.lastName,
+    lifetime: Number(p.lifetimeAmount),
+    thisYear: Number(p.ytdAmount),
+    lastYear: Number(p.lastYearAmount),
+    lastContact: p.lastContactAt ? new Date(p.lastContactAt).toISOString().slice(0, 10) : null,
+    alert: p.alertColor,
+  }));
+
   return (
     <div className="p-6">
       <PageHeader
         title="Biggest Supporters"
         subtitle={`Top ${top.length} donors · ${formatCurrency(totalShown)} (${sharePct}% of all lifetime giving)`}
         actions={
+          <>
+          <ReportActions rows={csvRows} filename={`biggest-supporters-top-${top.length}`} />
           <form action="" className="flex items-center gap-2">
             <label htmlFor="n" className="text-xs text-muted-foreground">Show top</label>
             <input
@@ -44,6 +58,7 @@ export default async function BiggestSupportersPage({
               Go
             </button>
           </form>
+          </>
         }
       />
 

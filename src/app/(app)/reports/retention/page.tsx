@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/KpiCard";
+import { ReportActions } from "@/components/reports/ReportActions";
 import { prisma } from "@/lib/prisma";
 import { getActiveCenterIds } from "@/lib/auth";
 import { formatCurrency } from "@/lib/utils";
@@ -73,12 +74,23 @@ export default async function RetentionReportPage({
   const yearOptions: number[] = [];
   for (let y = now.getFullYear(); y >= now.getFullYear() - 5; y--) yearOptions.push(y - 1);
 
+  // CSV covers every lapsed donor, not just the 50 shown on screen —
+  // this is the list staff will work through for re-engagement.
+  const csvRows = lapsed.map((p) => ({
+    firstName: p.firstName,
+    lastName: p.lastName,
+    [`giving${cohortYear}`]: p.cohortGiving,
+    lastContact: p.lastContactAt ? new Date(p.lastContactAt).toISOString().slice(0, 10) : null,
+  }));
+
   return (
     <div className="p-6">
       <PageHeader
         title="Donor Retention"
         subtitle={`What % of donors who gave in ${cohortYear} also gave in ${followYear}?`}
         actions={
+          <>
+          <ReportActions rows={csvRows} filename={`lapsed-donors-${cohortYear}-cohort`} />
           <form action="" className="flex items-center gap-2">
             <label htmlFor="cohortYear" className="text-xs text-muted-foreground">Cohort year</label>
             <select
@@ -93,6 +105,7 @@ export default async function RetentionReportPage({
               Go
             </button>
           </form>
+          </>
         }
       />
 

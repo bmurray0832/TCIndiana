@@ -1,4 +1,6 @@
 import { PageHeader } from "@/components/PageHeader";
+import { BarList } from "@/components/reports/BarList";
+import { ReportActions } from "@/components/reports/ReportActions";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, getActiveCenterIds } from "@/lib/auth";
 import { formatCurrency } from "@/lib/utils";
@@ -73,12 +75,25 @@ export default async function YoYReportPage({
   const yearOptions: number[] = [];
   for (let y = now.getFullYear(); y >= now.getFullYear() - 5; y--) yearOptions.push(y);
 
+  const csvRows = rows.map(({ center, curr, prev, change }) => ({
+    center: center.name,
+    [`raised${thisYear}`]: curr.total,
+    [`gifts${thisYear}`]: curr.count,
+    [`donors${thisYear}`]: curr.donors,
+    [`raised${lastYear}`]: prev.total,
+    [`gifts${lastYear}`]: prev.count,
+    [`donors${lastYear}`]: prev.donors,
+    changePct: change,
+  }));
+
   return (
     <div className="p-6">
       <PageHeader
         title="Year-over-Year by Center"
         subtitle={`${thisYear} vs ${lastYear}`}
         actions={
+          <>
+          <ReportActions rows={csvRows} filename={`yoy-by-center-${thisYear}`} />
           <form action="" className="flex items-center gap-2">
             <label htmlFor="year" className="text-xs text-muted-foreground">Year</label>
             <select
@@ -93,8 +108,27 @@ export default async function YoYReportPage({
               Go
             </button>
           </form>
+          </>
         }
       />
+
+      {rows.length > 0 && (
+        <div className="mb-6">
+          <BarList
+            title={`Raised by center — ${thisYear} (solid) vs ${lastYear} (faded)`}
+            items={rows.map((r) => ({
+              label: r.center.name,
+              value: r.curr.total,
+              display: formatCurrency(r.curr.total),
+              secondary: {
+                value: r.prev.total,
+                display: formatCurrency(r.prev.total),
+                label: `${lastYear}`,
+              },
+            }))}
+          />
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-lg border border-border bg-card">
         <table className="w-full text-sm">

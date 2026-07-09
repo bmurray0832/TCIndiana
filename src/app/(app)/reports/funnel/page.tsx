@@ -1,5 +1,7 @@
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/KpiCard";
+import { BarList } from "@/components/reports/BarList";
+import { ReportActions } from "@/components/reports/ReportActions";
 import { prisma } from "@/lib/prisma";
 import { getActiveCenterIds } from "@/lib/auth";
 
@@ -42,12 +44,23 @@ export default async function FunnelReportPage({
     ? Math.round((recentConversions / (totalProspects + recentConversions)) * 100)
     : 0;
 
+  const csvRows = [
+    { stage: "Cold", count: cold },
+    { stage: "Warm", count: warm },
+    { stage: "Hot", count: hot },
+    { stage: "Donors", count: donors },
+    { stage: `Converted in ${windowDays}d`, count: recentConversions },
+    { stage: `New prospects in ${windowDays}d`, count: newProspects },
+  ];
+
   return (
     <div className="p-6">
       <PageHeader
         title="Pipeline Funnel"
         subtitle={`Snapshot of where prospects sit today + conversions in the last ${windowDays} days`}
         actions={
+          <>
+          <ReportActions rows={csvRows} filename={`pipeline-funnel-${windowDays}d`} />
           <form action="" className="flex items-center gap-2">
             <label htmlFor="window" className="text-xs text-muted-foreground">Window</label>
             <select
@@ -64,8 +77,21 @@ export default async function FunnelReportPage({
               Go
             </button>
           </form>
+          </>
         }
       />
+
+      <div className="mb-6">
+        <BarList
+          title="Pipeline stages"
+          items={[
+            { label: "Cold", value: cold, display: String(cold) },
+            { label: "Warm", value: warm, display: String(warm) },
+            { label: "Hot", value: hot, display: String(hot) },
+            { label: "Donors", value: donors, display: String(donors) },
+          ]}
+        />
+      </div>
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <FunnelStage label="Cold" count={cold} colorClass="bg-blue-500/15 text-blue-700 dark:text-blue-300" />
