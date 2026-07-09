@@ -1,24 +1,33 @@
+import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { ReportActions } from "@/components/reports/ReportActions";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, getActiveCenterIds } from "@/lib/auth";
+import { parsePeriodKind, resolvePeriod, periodOptions, type PeriodKind } from "@/lib/periods";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
+const KIND_LABELS: { kind: PeriodKind; label: string }[] = [
+  { kind: "month", label: "Month" },
+  { kind: "quarter", label: "Quarter" },
+  { kind: "year", label: "Year" },
+];
+
 export default async function YoYReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ year?: string }>;
+  searchParams: Promise<{ period?: string; value?: string; year?: string }>;
 }) {
   const sp = await searchParams;
   const me = await getCurrentUser();
   if (!me) return null;
 
-  const now = new Date();
-  const thisYear = Number(sp.year) || now.getFullYear();
-  const lastYear = thisYear - 1;
+  const kind = parsePeriodKind(sp.period);
+  // `year` is the legacy param — still honored so old links keep working.
+  const p = resolvePeriod(kind, sp.value ?? sp.year);
+  const options = periodOptions(kind);
 
   const centerIds = await getActiveCenterIds();
   const centers = await prisma.center.findMany({
@@ -26,9 +35,7 @@ export default async function YoYReportPage({
     orderBy: { name: "asc" },
   });
 
-  async function rangeStats(centerId: string, year: number) {
-    const start = new Date(year, 0, 1);
-    const end = new Date(year + 1, 0, 1);
+  async function rangeStats(centerId: string, start: Date, end: Date) {
     const agg = await prisma.donation.aggregate({
       where: { centerId, date: { gte: start, lt: end } },
       _sum: { amount: true },
@@ -50,7 +57,10 @@ export default async function YoYReportPage({
 
   const rows = await Promise.all(
     centers.map(async (c) => {
-      const [curr, prev] = await Promise.all([rangeStats(c.id, thisYear), rangeStats(c.id, lastYear)]);
+      const [curr, prev] = await Promise.all([
+        rangeStats(c.id, p.currStart, p.currEnd),
+        rangeStats(c.id, p.prevStart, p.prevEnd),
+      ]);
       const change = prev.total > 0 ? Math.round(((curr.total - prev.total) / prev.total) * 100) : null;
       return { center: c, curr, prev, change };
     }),
@@ -71,19 +81,16 @@ export default async function YoYReportPage({
     ? Math.round(((totals.currTotal - totals.prevTotal) / totals.prevTotal) * 100)
     : null;
 
-  const yearOptions: number[] = [];
-  for (let y = now.getFullYear(); y >= now.getFullYear() - 5; y--) yearOptions.push(y);
-
   const maxRaised = Math.max(...rows.flatMap((r) => [r.curr.total, r.prev.total]), 1);
 
   const csvRows = rows.map(({ center, curr, prev, change }) => ({
     center: center.name,
-    [`raised${thisYear}`]: curr.total,
-    [`gifts${thisYear}`]: curr.count,
-    [`donors${thisYear}`]: curr.donors,
-    [`raised${lastYear}`]: prev.total,
-    [`gifts${lastYear}`]: prev.count,
-    [`donors${lastYear}`]: prev.donors,
+    [`raised ${p.currLabel}`]: curr.total,
+    [`gifts ${p.currLabel}`]: curr.count,
+    [`donors ${p.currLabel}`]: curr.donors,
+    [`raised ${p.prevLabel}`]: prev.total,
+    [`gifts ${p.prevLabel}`]: prev.count,
+    [`donors ${p.prevLabel}`]: prev.donors,
     changePct: change,
   }));
 
@@ -91,19 +98,33 @@ export default async function YoYReportPage({
     <div className="p-6">
       <PageHeader
         title="Year-over-Year by Center"
-        subtitle={`${thisYear} vs ${lastYear}`}
+        subtitle={`${p.currLabel} vs ${p.prevLabel}`}
         actions={
           <>
-          <ReportActions rows={csvRows} filename={`yoy-by-center-${thisYear}`} />
-          <form action="" className="flex items-center gap-2">
-            <label htmlFor="year" className="text-xs text-muted-foreground">Year</label>
+          <ReportActions rows={csvRows} filename={`yoy-by-center-${p.slug}`} />
+          <div className="flex items-center rounded-md border border-border bg-card p-0.5 print:hidden">
+            {KIND_LABELS.map(({ kind: k, label }) => (
+              <Link
+                key={k}
+                href={`?period=${k}`}
+                className={cn(
+                  "rounded px-2.5 py-1 text-xs font-medium",
+                  k === kind ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted",
+                )}
+              >
+                {label}
+              </Link>
+            ))}
+          </div>
+          <form action="" className="flex items-center gap-2 print:hidden">
+            <input type="hidden" name="period" value={kind} />
             <select
-              id="year"
-              name="year"
-              defaultValue={thisYear}
+              name="value"
+              defaultValue={p.value}
+              aria-label={`Select ${kind}`}
               className="rounded-md border border-border bg-background px-2 py-1 text-sm"
             >
-              {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
+              {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
             <button type="submit" className="rounded-md border border-border bg-card px-3 py-1 text-xs font-medium hover:bg-muted">
               Go
@@ -118,8 +139,8 @@ export default async function YoYReportPage({
           <thead className="border-b border-border bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
               <th rowSpan={2} className="px-4 py-2.5 font-medium align-bottom">Center</th>
-              <th colSpan={3} className="px-4 py-1.5 text-center font-medium border-b border-border">{thisYear}</th>
-              <th colSpan={3} className="px-4 py-1.5 text-center font-medium border-b border-border border-l">{lastYear}</th>
+              <th colSpan={3} className="px-4 py-1.5 text-center font-medium border-b border-border">{p.currLabel}</th>
+              <th colSpan={3} className="px-4 py-1.5 text-center font-medium border-b border-border border-l">{p.prevLabel}</th>
               <th rowSpan={2} className="px-4 py-2.5 text-right font-medium align-bottom border-l">YoY $</th>
             </tr>
             <tr>
