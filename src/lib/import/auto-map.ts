@@ -4,6 +4,11 @@ import { TARGET_FIELDS, type ImportKindLower, type Mapping } from "@/lib/import/
  *  emit (and common synonyms). The auto-mapper looks for an exact match
  *  first, then a containment match. */
 const HINTS: Record<string, string[]> = {
+  // bloomerangId means a different column per kind (constituent vs
+  // transaction vs interaction ID) — kind-specific entries below take
+  // precedence over this constituent-flavored default.
+  "transactions:bloomerangId": ["transaction id", "transaction number", "gift id"],
+  "interactions:bloomerangId": ["interaction id", "interaction number"],
   bloomerangId: ["account number", "constituent id", "constituent number", "constituent account number", "id"],
   firstName: ["first name", "firstname", "first"],
   lastName: ["last name", "lastname", "last", "surname"],
@@ -42,7 +47,7 @@ export function autoMap(headers: string[], kind: ImportKindLower): Mapping {
   const used = new Set<string>();
 
   for (const field of fields) {
-    const hints = HINTS[field.key] ?? [field.label.toLowerCase()];
+    const hints = HINTS[`${kind}:${field.key}`] ?? HINTS[field.key] ?? [field.label.toLowerCase()];
     let best: { header: string; score: number } | null = null;
     for (const header of headers) {
       if (used.has(header)) continue;
