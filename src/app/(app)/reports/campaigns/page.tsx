@@ -1,5 +1,4 @@
 import { PageHeader } from "@/components/PageHeader";
-import { BarList } from "@/components/reports/BarList";
 import { ReportActions } from "@/components/reports/ReportActions";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, getActiveCenterIds } from "@/lib/auth";
@@ -67,19 +66,6 @@ export default async function CampaignsReportPage() {
         actions={<ReportActions rows={csvRows} filename="campaign-performance" />}
       />
 
-      {stats.length > 0 && (
-        <div className="mb-6">
-          <BarList
-            title="Raised by campaign (top 8)"
-            items={stats.slice(0, 8).map((s) => ({
-              label: s.campaign.name,
-              value: s.total,
-              display: formatCurrency(s.total),
-            }))}
-          />
-        </div>
-      )}
-
       <div className="overflow-hidden rounded-lg border border-border bg-card">
         <table className="w-full text-sm">
           <thead className="border-b border-border bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
@@ -104,6 +90,7 @@ export default async function CampaignsReportPage() {
               stats.map(({ campaign, total, avg, count, lastGift }) => {
                 const goal = Number(campaign.goalAmount ?? 0);
                 const pct = goal > 0 ? Math.round((total / goal) * 100) : null;
+                const maxTotal = Math.max(...stats.map((s) => s.total), 1);
                 return (
                   <tr key={campaign.id} className="hover:bg-muted/30">
                     <td className="px-4 py-2">
@@ -112,7 +99,17 @@ export default async function CampaignsReportPage() {
                         <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Archived</div>
                       )}
                     </td>
-                    <td className="px-4 py-2 text-right font-medium tabular-nums">{formatCurrency(total)}</td>
+                    <td className="w-64 px-4 py-2">
+                      <div className="flex items-center gap-3">
+                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="h-full rounded-full bg-primary/70"
+                            style={{ width: `${Math.max((total / maxTotal) * 100, total > 0 ? 1.5 : 0)}%` }}
+                          />
+                        </div>
+                        <span className="w-20 shrink-0 text-right font-medium tabular-nums">{formatCurrency(total)}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-2 text-right text-xs tabular-nums text-muted-foreground">
                       {goal > 0 ? formatCurrency(goal) : "—"}
                     </td>

@@ -1,6 +1,5 @@
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/KpiCard";
-import { BarList } from "@/components/reports/BarList";
 import { ReportActions } from "@/components/reports/ReportActions";
 import { prisma } from "@/lib/prisma";
 import { getActiveCenterIds } from "@/lib/auth";
@@ -80,18 +79,6 @@ export default async function FunnelReportPage({
           </>
         }
       />
-
-      <div className="mb-6">
-        <BarList
-          title="Pipeline stages"
-          items={[
-            { label: "Cold", value: cold, display: String(cold) },
-            { label: "Warm", value: warm, display: String(warm) },
-            { label: "Hot", value: hot, display: String(hot) },
-            { label: "Donors", value: donors, display: String(donors) },
-          ]}
-        />
-      </div>
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <FunnelStage label="Cold" count={cold} colorClass="bg-blue-500/15 text-blue-700 dark:text-blue-300" />

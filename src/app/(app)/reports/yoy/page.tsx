@@ -1,5 +1,4 @@
 import { PageHeader } from "@/components/PageHeader";
-import { BarList } from "@/components/reports/BarList";
 import { ReportActions } from "@/components/reports/ReportActions";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, getActiveCenterIds } from "@/lib/auth";
@@ -75,6 +74,8 @@ export default async function YoYReportPage({
   const yearOptions: number[] = [];
   for (let y = now.getFullYear(); y >= now.getFullYear() - 5; y--) yearOptions.push(y);
 
+  const maxRaised = Math.max(...rows.flatMap((r) => [r.curr.total, r.prev.total]), 1);
+
   const csvRows = rows.map(({ center, curr, prev, change }) => ({
     center: center.name,
     [`raised${thisYear}`]: curr.total,
@@ -112,24 +113,6 @@ export default async function YoYReportPage({
         }
       />
 
-      {rows.length > 0 && (
-        <div className="mb-6">
-          <BarList
-            title={`Raised by center — ${thisYear} (solid) vs ${lastYear} (faded)`}
-            items={rows.map((r) => ({
-              label: r.center.name,
-              value: r.curr.total,
-              display: formatCurrency(r.curr.total),
-              secondary: {
-                value: r.prev.total,
-                display: formatCurrency(r.prev.total),
-                label: `${lastYear}`,
-              },
-            }))}
-          />
-        </div>
-      )}
-
       <div className="overflow-hidden rounded-lg border border-border bg-card">
         <table className="w-full text-sm">
           <thead className="border-b border-border bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
@@ -152,10 +135,14 @@ export default async function YoYReportPage({
             {rows.map(({ center, curr, prev, change }) => (
               <tr key={center.id} className="hover:bg-muted/30">
                 <td className="px-4 py-2 font-medium">{center.name}</td>
-                <td className="px-4 py-2 text-right tabular-nums font-medium">{formatCurrency(curr.total)}</td>
+                <td className="w-56 px-4 py-2">
+                  <RaisedBar value={curr.total} max={maxRaised} />
+                </td>
                 <td className="px-4 py-2 text-right tabular-nums text-xs">{curr.count}</td>
                 <td className="px-4 py-2 text-right tabular-nums text-xs">{curr.donors}</td>
-                <td className="px-4 py-2 text-right tabular-nums text-xs text-muted-foreground border-l">{formatCurrency(prev.total)}</td>
+                <td className="w-56 px-4 py-2 border-l">
+                  <RaisedBar value={prev.total} max={maxRaised} muted />
+                </td>
                 <td className="px-4 py-2 text-right tabular-nums text-xs text-muted-foreground">{prev.count}</td>
                 <td className="px-4 py-2 text-right tabular-nums text-xs text-muted-foreground">{prev.donors}</td>
                 <td className={cn("px-4 py-2 text-right tabular-nums text-xs font-medium border-l", changeClass(change))}>
@@ -178,6 +165,22 @@ export default async function YoYReportPage({
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+function RaisedBar({ value, max, muted }: { value: number; max: number; muted?: boolean }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+        <div
+          className={muted ? "h-full rounded-full bg-primary/30" : "h-full rounded-full bg-primary/70"}
+          style={{ width: `${Math.max((value / max) * 100, value > 0 ? 1.5 : 0)}%` }}
+        />
+      </div>
+      <span className={cn("w-20 shrink-0 text-right tabular-nums", muted ? "text-xs text-muted-foreground" : "font-medium")}>
+        {formatCurrency(value)}
+      </span>
     </div>
   );
 }
