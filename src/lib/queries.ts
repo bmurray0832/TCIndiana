@@ -2,7 +2,7 @@
  *  current user's accessible centers via the auth shim. */
 
 import { prisma } from "@/lib/prisma";
-import { getActiveCenterIds, getCurrentUser } from "@/lib/auth";
+import { getActiveCenterIds, getCenterIdsWhereCan, getCurrentUser } from "@/lib/auth";
 import {
   computeAlertColor,
   daysSinceContact,
@@ -353,6 +353,14 @@ export async function leadershipMetrics() {
     centerBreakdown,
     centerCount: accessibleCenters.length,
   };
+}
+
+/** Centers the user may bulk-import into, for the import wizard. */
+export async function importableCenters() {
+  const ids = await getCenterIdsWhereCan("import:run");
+  return ids.length
+    ? prisma.center.findMany({ where: { id: { in: ids } }, orderBy: { name: "asc" }, select: { id: true, name: true } })
+    : [];
 }
 
 export async function currentUserSummary() {

@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getAccessibleCenterIds, requireWriteAccess } from "@/lib/auth";
+import { getAccessibleCenterIds, authorize } from "@/lib/auth";
 import { recomputePerson } from "@/lib/recompute";
 
 const ContactType = z.enum([
@@ -52,7 +52,9 @@ export async function logContact(
   if (!person || !accessible.includes(person.centerId)) {
     return { ok: false, error: "Person not found." };
   }
-  const me = await requireWriteAccess(person.centerId);
+  const gate = await authorize(person.centerId, "data:write");
+  if (!gate.ok) return gate;
+  const me = gate.user;
 
   await prisma.$transaction(async (tx) => {
     await tx.contact.create({

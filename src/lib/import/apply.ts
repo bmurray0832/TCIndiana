@@ -34,6 +34,9 @@ export type ConstituentRecord = {
   lastGiftDate?: Date | null;
   lifetimeAmount?: number | null;
   notes?: string | null;
+  /** Center this record names, when the source says. New people are
+   *  created there; see `opts.centerId` for the fallback. */
+  centerId?: string | null;
   /** Deceased in Bloomerang: kept for giving history, never surfaced
    *  as someone to follow up with. */
   deceased?: boolean;
@@ -104,7 +107,9 @@ export async function applyConstituents(
     /** Center for constituents that don't exist here yet. */
     centerId: string;
     /** Move existing people into `centerId` (CSV "import into center X").
-     *  The API sync passes false so staff reassignments survive. */
+     *  The API sync passes false so staff reassignments survive; it only
+     *  moves someone still sitting in the default center once their
+     *  record names a real one. */
     reassignCenter: boolean;
   },
 ): Promise<ApplyResult> {
@@ -138,6 +143,9 @@ export async function applyConstituents(
         continue;
       }
 
+      // A center named by the record must be one the caller may write to.
+      const named = rec.centerId && opts.accessibleCenterIds.includes(rec.centerId) ? rec.centerId : null;
+
       const isDonor = !!(rec.lastGiftDate || (rec.lifetimeAmount && rec.lifetimeAmount > 0) || rec.donorStatus);
 
       if (prior) {
@@ -147,7 +155,11 @@ export async function applyConstituents(
             data: {
               firstName: rec.firstName,
               lastName: rec.lastName,
-              centerId: opts.reassignCenter ? opts.centerId : prior.centerId,
+              centerId: opts.reassignCenter
+                ? opts.centerId
+                : named && prior.centerId === opts.centerId
+                  ? named
+                  : prior.centerId,
               email: rec.email ?? prior.email,
               phone: rec.phone ?? prior.phone,
               organization: rec.organization ?? prior.organization,
@@ -168,7 +180,7 @@ export async function applyConstituents(
           const made = await prisma.person.create({
             data: {
               bloomerangId: rec.bloomerangId,
-              centerId: opts.centerId,
+              centerId: named ?? opts.centerId,
               firstName: rec.firstName,
               lastName: rec.lastName,
               email: rec.email ?? null,

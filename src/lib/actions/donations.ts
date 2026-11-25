@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/prisma";
-import { getAccessibleCenterIds, requireWriteAccess } from "@/lib/auth";
+import { getAccessibleCenterIds, authorize } from "@/lib/auth";
 import { recomputePerson } from "@/lib/recompute";
 
 const PaymentMethod = z.enum(["CHECK", "CREDIT_CARD", "CASH", "ONLINE", "BANK_TRANSFER"]);
@@ -49,7 +49,15 @@ export async function addDonation(
   if (!person || !accessible.includes(person.centerId)) {
     return { ok: false, error: "Person not found." };
   }
-  await requireWriteAccess(person.centerId);
+  const gate = await authorize(person.centerId, "data:write");
+  if (!gate.ok) return gate;
+  if (data.campaignId) {
+    const campaign = await prisma.campaign.findFirst({
+      where: { id: data.campaignId, organizationId: gate.user.organizationId },
+      select: { id: true },
+    });
+    if (!campaign) return { ok: false, error: "Pick a campaign from the list.", fieldErrors: { campaignId: "Unknown campaign" } };
+  }
 
   await prisma.$transaction(async (tx) => {
     const donation = await tx.donation.create({

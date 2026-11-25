@@ -2,13 +2,14 @@ import { PageHeader } from "@/components/PageHeader";
 import { CampaignsList } from "@/components/settings/CampaignsList";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { canOrg } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
 export default async function CampaignsSettingsPage() {
   const me = await getCurrentUser();
   if (!me) return null;
-  if (me.orgRole !== "ORG_ADMIN") {
+  if (!canOrg(me, "campaigns:manage")) {
     return <div className="text-sm text-muted-foreground">HQ admins only.</div>;
   }
 

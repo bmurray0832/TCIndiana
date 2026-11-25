@@ -141,12 +141,18 @@ lacks: prospects and the follow-up layer.
   this app have no Bloomerang ID and are never touched by a sync.
 - Mass emails are not logged as contacts, pledges count only when paid,
   and gifts refunded in Bloomerang are removed here.
+- **Centers:** if Bloomerang constituents carry a custom field naming
+  their center, enter its label under Settings → Integrations. Values
+  matching a center's name are placed automatically; an admin maps the
+  rest; everyone else lands in the default center.
 - Code: `src/lib/bloomerang/` (client, mappers, sync) writes through
   `src/lib/import/apply.ts`, the same engine the CSV wizard uses.
 
 ## Scheduled emails
 
-Two cron jobs (Railway-managed via `railway.toml`):
+Scheduled jobs run inside the app (`src/lib/scheduler.ts`), on
+Indiana time, each claimed in the `scheduled_runs` table so it runs
+once. The `/api/cron/*` endpoints run the same jobs on demand:
 
 - **`/api/cron/weekly-digest`** — Monday 9 AM ET. For every active
   user, builds a list of the 10 people in their accessible centers who

@@ -16,7 +16,15 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type NavItem = { href: string; label: string; icon: React.ComponentType<{ className?: string }> };
+import type { Permission } from "@/lib/permissions";
+
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  /** Hidden unless the user holds this permission somewhere. */
+  requires?: Permission;
+};
 type NavSection = { label: string; items: NavItem[] };
 
 const sections: NavSection[] = [
@@ -47,13 +55,23 @@ const sections: NavSection[] = [
   {
     label: "Admin",
     items: [
-      { href: "/import", label: "Bloomerang import", icon: Download },
+      { href: "/import", label: "Bloomerang import", icon: Download, requires: "import:run" },
       { href: "/settings", label: "Settings", icon: Settings },
     ],
   },
 ];
 
-export function Sidebar({ footer }: { footer?: React.ReactNode }) {
+export function Sidebar({
+  footer,
+  permissions,
+}: {
+  footer?: React.ReactNode;
+  /** Permissions the user holds on at least one center (or org-wide). */
+  permissions: Permission[];
+}) {
+  const visible = sections
+    .map((s) => ({ ...s, items: s.items.filter((i) => !i.requires || permissions.includes(i.requires)) }))
+    .filter((s) => s.items.length > 0);
   const pathname = usePathname();
   return (
     <aside className="flex h-full w-56 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
@@ -68,7 +86,7 @@ export function Sidebar({ footer }: { footer?: React.ReactNode }) {
       </Link>
 
       <nav className="flex-1 overflow-y-auto px-2 py-4">
-        {sections.map((section) => (
+        {visible.map((section) => (
           <div key={section.label} className="mb-6">
             <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               {section.label}

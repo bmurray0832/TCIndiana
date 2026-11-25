@@ -20,6 +20,7 @@ import {
   type TransactionRecord,
 } from "@/lib/import/apply";
 import { pages, type Fetcher } from "./client";
+import { buildCenterResolver, centerFieldValue } from "./centers";
 import {
   apiDate,
   isPersonalInteraction,
@@ -84,7 +85,10 @@ async function sync(opts: {
 }): Promise<SyncSummary> {
   const org = await prisma.organization.findUnique({
     where: { id: opts.organizationId },
-    include: { centers: { select: { id: true } } },
+    include: {
+      centers: { select: { id: true, name: true } },
+      bloomerangCenterMaps: { select: { value: true, centerId: true } },
+    },
   });
   if (!org) return { ok: false, error: "Organization not found." };
   const centerIds = org.centers.map((c) => c.id);
@@ -99,13 +103,36 @@ async function sync(opts: {
   const lastModified = since?.toISOString();
   const scope = { organizationId: org.id, accessibleCenterIds: centerIds, dryRun: false };
 
+  // Center per constituent: the configured custom field, resolved by a
+  // saved decision or by center name; anything else lands in the default.
+  const resolver = buildCenterResolver(org.centers, org.bloomerangCenterMaps);
+  const seenValues = new Set<string>();
+
   const constituents = zero();
   for await (const page of pages<ApiConstituent>(
     "/constituents",
     { lastModified, orderBy: "Id", orderDirection: "Asc" },
     opts.fetcher,
   )) {
-    add(constituents, await applyConstituents(page.map(mapConstituent), { ...scope, centerId, reassignCenter: false }));
+    const records = page.map((c) => {
+      const rec = mapConstituent(c);
+      const raw = centerFieldValue(c, org.bloomerangCenterField);
+      if (!raw || "invalid" in rec) return rec;
+      seenValues.add(raw);
+      return { ...rec, centerId: resolver.resolve(raw) };
+    });
+    add(constituents, await applyConstituents(records, { ...scope, centerId, reassignCenter: false }));
+  }
+
+  // Remember every value seen so an admin can map the ones that didn't
+  // match a center by name.
+  const known = new Set(org.bloomerangCenterMaps.map((m) => m.value.toLowerCase().trim()));
+  const fresh = [...seenValues].filter((v) => !known.has(v.toLowerCase().trim()));
+  if (fresh.length) {
+    await prisma.bloomerangCenterMap.createMany({
+      data: fresh.map((value) => ({ organizationId: org.id, value })),
+      skipDuplicates: true,
+    });
   }
 
   const transactions = zero();

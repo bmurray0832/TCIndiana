@@ -3,11 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/prisma";
-import {
-  getCurrentUser,
-  getAccessibleCenterIds,
-  requireWriteAccess,
-} from "@/lib/auth";
+import { authorize, getCenterIdsWhereCan, getCurrentUser } from "@/lib/auth";
 import {
   applyConstituents,
   applyInteractions,
@@ -90,11 +86,9 @@ async function finish(
 async function importConstituents(input: ImportInput, user: Actor): Promise<ImportResult> {
   if (!input.centerId) return { ok: false, error: "Pick a center for the constituent import." };
 
-  const accessible = await getAccessibleCenterIds();
-  if (!accessible.includes(input.centerId)) {
-    return { ok: false, error: "You don't have access to that center." };
-  }
-  await requireWriteAccess(input.centerId);
+  const gate = await authorize(input.centerId, "import:run");
+  if (!gate.ok) return gate;
+  const accessible = await getCenterIdsWhereCan("import:run");
 
   const records = input.rows.map((row): ConstituentRecord | Invalid => {
     const get = (key: string) => val(row, input.mapping, key);
@@ -129,14 +123,6 @@ async function importConstituents(input: ImportInput, user: Actor): Promise<Impo
   return finish(input, user, "CONSTITUENTS", res, ["/donors", "/prospects"]);
 }
 
-/** Centers this user may write to (viewers can read but not import). */
-async function writableCenterIds(): Promise<string[]> {
-  const user = await getCurrentUser();
-  if (!user) return [];
-  if (user.orgRole === "ORG_ADMIN") return getAccessibleCenterIds();
-  return user.centerRoles.filter((r) => r.role !== "VIEWER").map((r) => r.centerId);
-}
-
 async function importTransactions(input: ImportInput, user: Actor): Promise<ImportResult> {
   const records = input.rows.map((row): TransactionRecord | Invalid => {
     const get = (key: string) => val(row, input.mapping, key);
@@ -160,7 +146,7 @@ async function importTransactions(input: ImportInput, user: Actor): Promise<Impo
 
   const res = await applyTransactions(records, {
     organizationId: user.organizationId,
-    accessibleCenterIds: await writableCenterIds(),
+    accessibleCenterIds: await getCenterIdsWhereCan("import:run"),
     dryRun: input.dryRun,
   });
   return finish(input, user, "TRANSACTIONS", res, ["/donations", "/donors", "/dashboard"]);
@@ -186,7 +172,7 @@ async function importInteractions(input: ImportInput, user: Actor): Promise<Impo
 
   const res = await applyInteractions(records, {
     organizationId: user.organizationId,
-    accessibleCenterIds: await writableCenterIds(),
+    accessibleCenterIds: await getCenterIdsWhereCan("import:run"),
     dryRun: input.dryRun,
   });
   return finish(input, user, "INTERACTIONS", res, ["/contacts", "/dashboard"]);

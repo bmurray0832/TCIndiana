@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { ImportWizard } from "@/components/import/ImportWizard";
-import { currentUserSummary } from "@/lib/queries";
+import { importableCenters } from "@/lib/queries";
 import type { ImportKindLower } from "@/lib/import/types";
 
 const TITLES: Record<ImportKindLower, { title: string; subtitle: string }> = {
@@ -32,7 +32,14 @@ export default async function ImportKindPage({
   const { kind } = await params;
   if (!isValidKind(kind)) notFound();
   const meta = TITLES[kind];
-  const me = await currentUserSummary();
+  const centers = await importableCenters();
+  if (centers.length === 0) {
+    return (
+      <div className="p-6">
+        <PageHeader title={meta.title} subtitle="Your role is view-only, so importing isn't available. Ask an HQ admin if you need it." />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -40,7 +47,7 @@ export default async function ImportKindPage({
         ← Back to imports
       </Link>
       <PageHeader title={meta.title} subtitle={meta.subtitle} />
-      <ImportWizard kind={kind} centers={me.centers} />
+      <ImportWizard kind={kind} centers={centers} />
     </div>
   );
 }

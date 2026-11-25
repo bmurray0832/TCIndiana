@@ -2,9 +2,11 @@ import { Mail, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { canOrg } from "@/lib/permissions";
 import { isMsGraphConfigured, type MsGraphTokens } from "@/lib/microsoft-graph";
 import { disconnectOutlook } from "@/lib/actions/integrations";
 import { isBloomerangConfigured } from "@/lib/bloomerang/client";
+import { buildCenterResolver } from "@/lib/bloomerang/centers";
 import { BloomerangSyncCard } from "@/components/settings/BloomerangSyncCard";
 
 export const dynamic = "force-dynamic";
@@ -24,12 +26,14 @@ export default async function IntegrationsPage({
   const outlookConfigured = isMsGraphConfigured();
 
   const org =
-    me.orgRole === "ORG_ADMIN"
+    canOrg(me, "integrations:manage")
       ? await prisma.organization.findUnique({
           where: { id: me.organizationId },
           select: {
             bloomerangDefaultCenterId: true,
             bloomerangLastSyncAt: true,
+            bloomerangCenterField: true,
+            bloomerangCenterMaps: { select: { id: true, value: true, centerId: true }, orderBy: { value: "asc" } },
             centers: { select: { id: true, name: true }, orderBy: { name: "asc" } },
           },
         })
@@ -48,6 +52,12 @@ export default async function IntegrationsPage({
           centers={org.centers}
           defaultCenterId={org.bloomerangDefaultCenterId}
           lastSyncAt={org.bloomerangLastSyncAt?.toISOString() ?? null}
+          centerField={org.bloomerangCenterField}
+          mappings={org.bloomerangCenterMaps.map((m) => ({
+            ...m,
+            // What the sync will do with this value right now.
+            nameMatchId: buildCenterResolver(org.centers, []).resolve(m.value),
+          }))}
         />
       )}
 

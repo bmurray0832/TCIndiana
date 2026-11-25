@@ -21,6 +21,12 @@ export type ApiConstituent = {
   Employer?: string | null;
   PrimaryEmail?: { Value?: string | null; IsBad?: boolean } | null;
   PrimaryPhone?: { Number?: string | null; Extension?: string | null } | null;
+  CustomValues?: {
+    FieldId?: number;
+    FieldText?: string;
+    Value?: { Id?: number; Value?: string };
+    Values?: { Id?: number; Value?: string }[];
+  }[];
   AuditTrail?: AuditTrail;
 };
 

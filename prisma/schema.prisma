@@ -30,6 +30,10 @@ model Organization {
   // center; lastSyncAt is the cursor for incremental runs.
   bloomerangDefaultCenterId String?   @map("bloomerang_default_center_id")
   bloomerangLastSyncAt      DateTime? @map("bloomerang_last_sync_at")
+  // Label of the Bloomerang constituent custom field that says which
+  // center someone belongs to (e.g. "Center"). Null = no such field.
+  bloomerangCenterField     String?   @map("bloomerang_center_field")
+  bloomerangCenterMaps      BloomerangCenterMap[]
 
   campaigns Campaign[]
   auditLog  AuditLog[]
@@ -65,6 +69,7 @@ model Center {
   campaigns     Campaign[]
   followUps     FollowUp[]
   userRoles     UserCenterRole[]
+  bloomerangMaps BloomerangCenterMap[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -492,4 +497,22 @@ model ScheduledRun {
   @@unique([job, slot])
   @@index([job, startedAt])
   @@map("scheduled_runs")
+}
+
+/// Which center a value of the Bloomerang center field means. The sync
+/// records every value it sees; a saved centerId beats matching the
+/// value against center names. Null centerId = not decided yet, so the
+/// constituent lands in the default center.
+model BloomerangCenterMap {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  value          String
+  centerId       String?      @map("center_id")
+  center         Center?      @relation(fields: [centerId], references: [id], onDelete: SetNull)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@unique([organizationId, value])
+  @@map("bloomerang_center_maps")
 }
