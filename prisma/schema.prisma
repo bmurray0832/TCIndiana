@@ -26,6 +26,15 @@ model Organization {
 
   centers   Center[]
   users     User[]
+  // Direct Bloomerang API sync. New constituents land in the default
+  // center; lastSyncAt is the cursor for incremental runs.
+  bloomerangDefaultCenterId String?   @map("bloomerang_default_center_id")
+  bloomerangLastSyncAt      DateTime? @map("bloomerang_last_sync_at")
+  // Label of the Bloomerang constituent custom field that says which
+  // center someone belongs to (e.g. "Center"). Null = no such field.
+  bloomerangCenterField     String?   @map("bloomerang_center_field")
+  bloomerangCenterMaps      BloomerangCenterMap[]
+
   campaigns Campaign[]
   auditLog  AuditLog[]
   imports   BloomerangImport[]
@@ -60,6 +69,7 @@ model Center {
   campaigns     Campaign[]
   followUps     FollowUp[]
   userRoles     UserCenterRole[]
+  bloomerangMaps BloomerangCenterMap[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -170,6 +180,8 @@ model Person {
   // Phase 3 (Stripe online giving) — set on first online gift so
   // subsequent recurring charges can attach to the same Stripe customer.
   stripeCustomerId String? @unique @map("stripe_customer_id")
+
+  portalLoginTokens PortalLoginToken[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -309,6 +321,9 @@ model Donation {
   notes         String?
 
   // Phase 3 (Stripe)
+  // The payment intent is the idempotency key: one gift per intent, no
+  // matter how many times Stripe redelivers the event.
+  stripePaymentIntentId String? @unique @map("stripe_payment_intent_id")
   stripeChargeId       String? @unique @map("stripe_charge_id")
   stripeSubscriptionId String? @map("stripe_subscription_id")
   stripeFeesCents      Int?    @map("stripe_fees_cents")
@@ -468,4 +483,58 @@ model AuditLog {
   @@index([organizationId, createdAt])
   @@index([entityType, entityId])
   @@map("audit_log")
+}
+
+// ─── SCHEDULED JOBS ──────────────────────────────────────────────────
+
+/// One row per job per due slot. The unique key is the lock: whichever
+/// process inserts the row first runs the job, so a restart or a second
+/// replica can never send the same digest twice.
+model ScheduledRun {
+  id         String    @id @default(cuid())
+  job        String
+  slot       String    // local date the run was due, e.g. "2026-11-30"
+  startedAt  DateTime  @default(now()) @map("started_at")
+  finishedAt DateTime? @map("finished_at")
+  ok         Boolean?
+  detail     Json?
+
+  @@unique([job, slot])
+  @@index([job, startedAt])
+  @@map("scheduled_runs")
+}
+
+/// Which center a value of the Bloomerang center field means. The sync
+/// records every value it sees; a saved centerId beats matching the
+/// value against center names. Null centerId = not decided yet, so the
+/// constituent lands in the default center.
+model BloomerangCenterMap {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  value          String
+  centerId       String?      @map("center_id")
+  center         Center?      @relation(fields: [centerId], references: [id], onDelete: SetNull)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@unique([organizationId, value])
+  @@map("bloomerang_center_maps")
+}
+
+// ─── DONOR PORTAL ────────────────────────────────────────────────────
+
+/// One row per emailed sign-in link. A link works once (usedAt) and
+/// only until expiresAt; the rows also rate-limit how many links one
+/// donor can be sent.
+model PortalLoginToken {
+  id        String    @id @default(cuid())
+  personId  String    @map("person_id")
+  person    Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([personId, createdAt])
+  @@map("portal_login_tokens")
 }

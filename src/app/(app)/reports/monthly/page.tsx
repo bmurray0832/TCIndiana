@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/KpiCard";
+import { ReportActions } from "@/components/reports/ReportActions";
 import { prisma } from "@/lib/prisma";
 import { getActiveCenterIds } from "@/lib/auth";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -64,12 +65,22 @@ export default async function MonthlyReportPage({
   const options = monthOptions();
   const currentValue = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}`;
 
+  const csvRows = donations.map((d) => ({
+    date: new Date(d.date).toISOString().slice(0, 10),
+    donor: `${d.person.firstName} ${d.person.lastName}`,
+    amount: Number(d.amount),
+    campaign: d.campaign?.name ?? null,
+    payment: d.paymentMethod.replace(/_/g, " ").toLowerCase(),
+  }));
+
   return (
     <div className="p-6">
       <PageHeader
         title="Monthly Donation Report"
         subtitle={label}
         actions={
+          <>
+          <ReportActions rows={csvRows} filename={`donations-${currentValue}`} />
           <form action="" className="flex items-center gap-2">
             <label htmlFor="month" className="text-xs text-muted-foreground">Month</label>
             <select
@@ -86,6 +97,7 @@ export default async function MonthlyReportPage({
               Go
             </button>
           </form>
+          </>
         }
       />
 

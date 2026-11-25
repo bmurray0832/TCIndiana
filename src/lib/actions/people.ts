@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getAccessibleCenterIds, requireWriteAccess } from "@/lib/auth";
+import { getAccessibleCenterIds, authorize } from "@/lib/auth";
 
 const PreferredContact = z.enum(["EMAIL", "PHONE", "MAIL", "IN_PERSON", "TEXT"]);
 const ProspectSource = z.enum([
@@ -58,7 +58,8 @@ export async function addPerson(
     return { ok: false, error: "Please fix the highlighted fields.", fieldErrors };
   }
   const data = parsed.data;
-  await requireWriteAccess(data.centerId);
+  const gate = await authorize(data.centerId, "data:write");
+  if (!gate.ok) return gate;
 
   const person = await prisma.person.create({
     data: {
@@ -94,7 +95,8 @@ export async function updatePerson(
   if (!existing || !accessibleCenters.includes(existing.centerId)) {
     return { ok: false, error: "Person not found." };
   }
-  await requireWriteAccess(existing.centerId);
+  const gate2 = await authorize(existing.centerId, "data:write");
+  if (!gate2.ok) return gate2;
 
   const parsed = parseFormData(formData);
   if (!parsed.success) {
@@ -105,6 +107,16 @@ export async function updatePerson(
     return { ok: false, error: "Please fix the highlighted fields.", fieldErrors };
   }
   const data = parsed.data;
+
+  // Moving someone to another center needs write access there too —
+  // the form's centerId is user input, not a trusted value.
+  if (data.centerId !== existing.centerId) {
+    if (!accessibleCenters.includes(data.centerId)) {
+      return { ok: false, error: "You don't have access to that center.", fieldErrors: { centerId: "No access" } };
+    }
+    const gate3 = await authorize(data.centerId, "data:write");
+    if (!gate3.ok) return gate3;
+  }
 
   await prisma.person.update({
     where: { id },

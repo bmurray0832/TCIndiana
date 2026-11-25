@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { appOrigin } from "@/lib/stripe";
-import { buildWeeklyDigest, renderWeeklyDigestText, sendDigestEmail } from "@/lib/digest";
+import { runWeeklyDigest } from "@/lib/jobs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,46 +10,13 @@ function authOk(request: Request): boolean {
   return request.headers.get("authorization") === `Bearer ${secret}`;
 }
 
-export async function POST(request: Request) {
+/** Run this job on demand. The in-app scheduler (lib/scheduler.ts) runs
+ *  it on its timetable; this endpoint is for testing and manual runs. */
+async function run(request: Request) {
   if (!authOk(request)) return new NextResponse("Unauthorized", { status: 401 });
-  return runDigest();
+  const result = await runWeeklyDigest();
+  return NextResponse.json({ ...result, ranAt: new Date().toISOString() }, { status: result.ok ? 200 : 502 });
 }
 
-// Allow GET for cron services that prefer it. Same auth check.
-export async function GET(request: Request) {
-  if (!authOk(request)) return new NextResponse("Unauthorized", { status: 401 });
-  return runDigest();
-}
-
-async function runDigest() {
-  const users = await prisma.user.findMany({
-    where: { active: true },
-    select: { id: true },
-  });
-  const base = appOrigin();
-
-  let sent = 0;
-  let skipped = 0;
-  const skipReasons: string[] = [];
-
-  for (const u of users) {
-    const digest = await buildWeeklyDigest(u.id);
-    if (!digest || digest.rows.length === 0) {
-      skipped++;
-      continue;
-    }
-    const body = renderWeeklyDigestText(digest, base);
-    const result = await sendDigestEmail({
-      to: digest.user.email,
-      subject: `${digest.rows.length} ${digest.rows.length === 1 ? "person" : "people"} to follow up with this week`,
-      body,
-    });
-    if (result.sent) sent++;
-    else {
-      skipped++;
-      if (result.reason && !skipReasons.includes(result.reason)) skipReasons.push(result.reason);
-    }
-  }
-
-  return NextResponse.json({ ok: true, sent, skipped, skipReasons, ranAt: new Date().toISOString() });
-}
+export const GET = run;
+export const POST = run;

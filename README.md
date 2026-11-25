@@ -98,8 +98,14 @@ When `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are set:
   field, and a "cover the processing fee" toggle
 - Submits to `/api/give/checkout` which creates a Stripe Checkout
   Session (card + ACH) and redirects the donor to Stripe-hosted payment
-- Webhook at `/api/stripe/webhook` handles `checkout.session.completed`
-  (one-time), `invoice.payment_succeeded` (recurring), `charge.refunded`
+- Webhook at `/api/stripe/webhook` (logic in `src/lib/stripe-webhook.ts`).
+  Enable these events on the endpoint: `checkout.session.completed`,
+  `checkout.session.async_payment_succeeded`, `invoice.paid`,
+  `invoice.payment_failed`, `customer.subscription.deleted`,
+  `charge.refunded`, `charge.updated`
+- A gift is recorded only once money is collected (bank payments settle
+  days later), once per payment however often Stripe redelivers, with
+  the processing fee stored for the Giving Breakdown report
 - On success: match Person by email + center → create Donation
   (`source=STRIPE`) → log a Contact (`outcome=MADE_DONATION`) → run
   `recomputePerson()`. Donors created from online gifts get
@@ -126,9 +132,33 @@ address and replies land in their inbox. Access tokens refresh
 automatically before each send. Without a connection, the composer
 falls back to the shared Resend account.
 
+## Bloomerang sync
+
+Bloomerang stays the system of record for donors and giving. This app
+pulls from it (read-only, never writes back) and adds what Bloomerang
+lacks: prospects and the follow-up layer.
+
+- Set `BLOOMERANG_API_KEY`, then **Settings → Integrations → Sync now**.
+  Pick the center new constituents land in; staff can move people
+  between centers afterwards and the sync will not move them back.
+- `GET /api/cron/bloomerang-sync` (Bearer `CRON_SECRET`) runs the same
+  incremental sync for scheduling; `?full=1` re-reads everything.
+- Constituents with no gifts arrive as prospects. Prospects created in
+  this app have no Bloomerang ID and are never touched by a sync.
+- Mass emails are not logged as contacts, pledges count only when paid,
+  and gifts refunded in Bloomerang are removed here.
+- **Centers:** if Bloomerang constituents carry a custom field naming
+  their center, enter its label under Settings → Integrations. Values
+  matching a center's name are placed automatically; an admin maps the
+  rest; everyone else lands in the default center.
+- Code: `src/lib/bloomerang/` (client, mappers, sync) writes through
+  `src/lib/import/apply.ts`, the same engine the CSV wizard uses.
+
 ## Scheduled emails
 
-Two cron jobs (Railway-managed via `railway.toml`):
+Scheduled jobs run inside the app (`src/lib/scheduler.ts`), on
+Indiana time, each claimed in the `scheduled_runs` table so it runs
+once. The `/api/cron/*` endpoints run the same jobs on demand:
 
 - **`/api/cron/weekly-digest`** — Monday 9 AM ET. For every active
   user, builds a list of the 10 people in their accessible centers who

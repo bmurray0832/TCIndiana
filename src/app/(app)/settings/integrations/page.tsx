@@ -2,8 +2,12 @@ import { Mail, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { canOrg } from "@/lib/permissions";
 import { isMsGraphConfigured, type MsGraphTokens } from "@/lib/microsoft-graph";
 import { disconnectOutlook } from "@/lib/actions/integrations";
+import { isBloomerangConfigured } from "@/lib/bloomerang/client";
+import { buildCenterResolver } from "@/lib/bloomerang/centers";
+import { BloomerangSyncCard } from "@/components/settings/BloomerangSyncCard";
 
 export const dynamic = "force-dynamic";
 
@@ -21,12 +25,41 @@ export default async function IntegrationsPage({
   const outlookConnected = !!tokens?.accessToken;
   const outlookConfigured = isMsGraphConfigured();
 
+  const org =
+    canOrg(me, "integrations:manage")
+      ? await prisma.organization.findUnique({
+          where: { id: me.organizationId },
+          select: {
+            bloomerangDefaultCenterId: true,
+            bloomerangLastSyncAt: true,
+            bloomerangCenterField: true,
+            bloomerangCenterMaps: { select: { id: true, value: true, centerId: true }, orderBy: { value: "asc" } },
+            centers: { select: { id: true, name: true }, orderBy: { name: "asc" } },
+          },
+        })
+      : null;
+
   return (
     <>
       <PageHeader
-        title="Email integrations"
-        subtitle="Connect your work mailbox so emails sent from the CRM come from your address and replies land in your inbox."
+        title="Integrations"
+        subtitle="Keep donor data flowing in from Bloomerang, and connect your work mailbox so emails come from your address."
       />
+
+      {org && (
+        <BloomerangSyncCard
+          configured={isBloomerangConfigured()}
+          centers={org.centers}
+          defaultCenterId={org.bloomerangDefaultCenterId}
+          lastSyncAt={org.bloomerangLastSyncAt?.toISOString() ?? null}
+          centerField={org.bloomerangCenterField}
+          mappings={org.bloomerangCenterMaps.map((m) => ({
+            ...m,
+            // What the sync will do with this value right now.
+            nameMatchId: buildCenterResolver(org.centers, []).resolve(m.value),
+          }))}
+        />
+      )}
 
       {sp.connected === "outlook" && (
         <div className="mb-4 flex items-start gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-900 dark:border-green-900/40 dark:bg-green-950/40 dark:text-green-200">

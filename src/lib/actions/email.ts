@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser, getAccessibleCenterIds, requireWriteAccess } from "@/lib/auth";
+import { getCurrentUser, getAccessibleCenterIds, authorize } from "@/lib/auth";
 import { recomputePerson } from "@/lib/recompute";
 import { sendMailAsUser } from "@/lib/microsoft-graph";
 
@@ -50,7 +50,8 @@ export async function sendEmailToPerson(
     return { ok: false, error: "Person not found" };
   }
   if (!person.email) return { ok: false, error: "This person has no email address on file." };
-  await requireWriteAccess(person.centerId);
+  const gate = await authorize(person.centerId, "data:write");
+  if (!gate.ok) return gate;
 
   // Prefer the staff member's connected mailbox (Phase 4.5). Fall back
   // to the shared Resend account, then to "not sent — just logged".

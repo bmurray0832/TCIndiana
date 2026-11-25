@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getStripe, isStripeConfigured, appOrigin, grossUpForFees } from "@/lib/stripe";
 
+export const runtime = "nodejs";
+
+/** Above this, a typo or a stolen-card test is likelier than a gift;
+ *  large gifts go through staff. */
+const MAX_ONLINE_GIFT = 50_000;
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export async function POST(request: Request) {
   if (!isStripeConfigured()) {
     return new NextResponse("Stripe not configured", { status: 503 });
@@ -21,10 +28,22 @@ export async function POST(request: Request) {
 
   const amount = Number(amountStr);
   if (!Number.isFinite(amount) || amount < 1) {
-    return new NextResponse("Invalid amount", { status: 400 });
+    return new NextResponse("Enter an amount of at least $1.", { status: 400 });
   }
-  if (!email || !firstName || !lastName) {
-    return new NextResponse("Missing donor info", { status: 400 });
+  if (amount > MAX_ONLINE_GIFT) {
+    return new NextResponse(
+      `Online gifts are limited to $${MAX_ONLINE_GIFT.toLocaleString("en-US")}. Please contact us to arrange a larger gift.`,
+      { status: 400 },
+    );
+  }
+  if (!firstName || !lastName || firstName.length > 100 || lastName.length > 100) {
+    return new NextResponse("Please enter your first and last name.", { status: 400 });
+  }
+  if (!EMAIL.test(email) || email.length > 254) {
+    return new NextResponse("Please enter a valid email address.", { status: 400 });
+  }
+  if (frequency !== "ONE_TIME" && frequency !== "MONTHLY") {
+    return new NextResponse("Choose one-time or monthly.", { status: 400 });
   }
 
   const center = await prisma.center.findFirst({

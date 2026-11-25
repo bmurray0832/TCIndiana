@@ -2,6 +2,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { CentersList } from "@/components/settings/CentersList";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { canOrg } from "@/lib/permissions";
 import { effectiveThresholds } from "@/lib/alerts";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +17,7 @@ export default async function CentersSettingsPage() {
     orderBy: { name: "asc" },
   });
   const orgDefaults = effectiveThresholds(org?.defaultAlertThresholds, null);
-  const canCreate = me.orgRole === "ORG_ADMIN";
+  const canCreate = canOrg(me, "centers:manage");
 
   return (
     <>

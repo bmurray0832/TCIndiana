@@ -4,7 +4,8 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import { authorizeOrg, getCurrentUser } from "@/lib/auth";
+import { canOn } from "@/lib/permissions";
 
 const OrgRole = z.enum(["ORG_ADMIN", "STAFF"]);
 const CenterRole = z.enum(["DIRECTOR", "STAFF", "VIEWER"]);
@@ -24,12 +25,6 @@ export type UserFormState =
   | { ok: false; error: string; fieldErrors?: Record<string, string> }
   | null;
 
-async function requireOrgAdmin() {
-  const me = await getCurrentUser();
-  if (!me) throw new Error("Not signed in");
-  if (me.orgRole !== "ORG_ADMIN") throw new Error("HQ admin only");
-  return me;
-}
 
 function parseCenterRoles(formData: FormData): { centerId: string; role: "DIRECTOR" | "STAFF" | "VIEWER" }[] {
   const out: { centerId: string; role: "DIRECTOR" | "STAFF" | "VIEWER" }[] = [];
@@ -47,7 +42,9 @@ export async function createUser(
   _prev: UserFormState,
   formData: FormData,
 ): Promise<UserFormState> {
-  const me = await requireOrgAdmin();
+  const gate = await authorizeOrg("users:manage");
+  if (!gate.ok) return gate;
+  const me = gate.user;
   const obj = Object.fromEntries(formData.entries());
   const parsed = userSchema.safeParse(obj);
   if (!parsed.success) {
@@ -81,7 +78,9 @@ export async function updateUser(
   _prev: UserFormState,
   formData: FormData,
 ): Promise<UserFormState> {
-  const me = await requireOrgAdmin();
+  const gate = await authorizeOrg("users:manage");
+  if (!gate.ok) return gate;
+  const me = gate.user;
   const existing = await prisma.user.findUnique({ where: { id } });
   if (!existing || existing.organizationId !== me.organizationId) {
     return { ok: false, error: "User not found." };
@@ -112,7 +111,9 @@ export async function updateUser(
 }
 
 export async function setUserActive(id: string, active: boolean) {
-  const me = await requireOrgAdmin();
+  const gate = await authorizeOrg("users:manage");
+  if (!gate.ok) return gate;
+  const me = gate.user;
   const existing = await prisma.user.findUnique({ where: { id } });
   if (!existing || existing.organizationId !== me.organizationId) return { ok: false };
   if (id === me.id) return { ok: false }; // can't deactivate yourself
@@ -146,7 +147,9 @@ export type CenterFormState =
   | null;
 
 export async function createCenter(_prev: CenterFormState, formData: FormData): Promise<CenterFormState> {
-  const me = await requireOrgAdmin();
+  const gate = await authorizeOrg("centers:manage");
+  if (!gate.ok) return gate;
+  const me = gate.user;
   const parsed = centerSchema.safeParse(Object.fromEntries(formData.entries()));
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
@@ -178,9 +181,7 @@ export async function updateCenter(
   if (!me) return { ok: false, error: "Not signed in" };
   const c = await prisma.center.findUnique({ where: { id } });
   if (!c || c.organizationId !== me.organizationId) return { ok: false, error: "Center not found" };
-  const isOrgAdmin = me.orgRole === "ORG_ADMIN";
-  const isDirector = me.centerRoles.some((r) => r.centerId === id && r.role === "DIRECTOR");
-  if (!isOrgAdmin && !isDirector) return { ok: false, error: "Only HQ admin or center director can edit." };
+  if (!canOn(me, id, "settings:manage")) return { ok: false, error: "Only HQ admin or center director can edit." };
 
   const parsed = centerSchema.safeParse(Object.fromEntries(formData.entries()));
   if (!parsed.success) {
@@ -213,9 +214,7 @@ export async function setCenterThresholds(
   if (!me) return { ok: false, error: "Not signed in" };
   const c = await prisma.center.findUnique({ where: { id } });
   if (!c || c.organizationId !== me.organizationId) return { ok: false, error: "Center not found" };
-  const isOrgAdmin = me.orgRole === "ORG_ADMIN";
-  const isDirector = me.centerRoles.some((r) => r.centerId === id && r.role === "DIRECTOR");
-  if (!isOrgAdmin && !isDirector) return { ok: false, error: "Only HQ admin or center director can edit thresholds." };
+  if (!canOn(me, id, "settings:manage")) return { ok: false, error: "Only HQ admin or center director can edit thresholds." };
 
   const parsed = thresholdsSchema.safeParse(Object.fromEntries(formData.entries()));
   if (!parsed.success) {
@@ -242,9 +241,7 @@ export async function clearCenterThresholds(id: string) {
   if (!me) return { ok: false };
   const c = await prisma.center.findUnique({ where: { id } });
   if (!c || c.organizationId !== me.organizationId) return { ok: false };
-  const isOrgAdmin = me.orgRole === "ORG_ADMIN";
-  const isDirector = me.centerRoles.some((r) => r.centerId === id && r.role === "DIRECTOR");
-  if (!isOrgAdmin && !isDirector) return { ok: false };
+  if (!canOn(me, id, "settings:manage")) return { ok: false };
   await prisma.center.update({ where: { id }, data: { alertThresholds: Prisma.JsonNull } });
   revalidatePath("/settings/centers");
   return { ok: true };
@@ -272,7 +269,9 @@ export async function createCampaign(
   _prev: CampaignFormState,
   formData: FormData,
 ): Promise<CampaignFormState> {
-  const me = await requireOrgAdmin();
+  const gate = await authorizeOrg("campaigns:manage");
+  if (!gate.ok) return gate;
+  const me = gate.user;
   const parsed = campaignSchema.safeParse(Object.fromEntries(formData.entries()));
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
@@ -292,7 +291,7 @@ export async function createCampaign(
       name: data.name,
       description: data.description,
       goalAmount: data.goalAmount != null ? new Prisma.Decimal(data.goalAmount) : null,
-      centerId: data.centerId || null,
+      centerId: data.centerId && me.orgCenterIds.includes(data.centerId) ? data.centerId : null,
       active: data.active,
     },
   });
@@ -305,7 +304,9 @@ export async function updateCampaign(
   _prev: CampaignFormState,
   formData: FormData,
 ): Promise<CampaignFormState> {
-  const me = await requireOrgAdmin();
+  const gate = await authorizeOrg("campaigns:manage");
+  if (!gate.ok) return gate;
+  const me = gate.user;
   const existing = await prisma.campaign.findUnique({ where: { id } });
   if (!existing || existing.organizationId !== me.organizationId) {
     return { ok: false, error: "Campaign not found." };
@@ -323,7 +324,7 @@ export async function updateCampaign(
       name: data.name,
       description: data.description ?? null,
       goalAmount: data.goalAmount != null ? new Prisma.Decimal(data.goalAmount) : null,
-      centerId: data.centerId || null,
+      centerId: data.centerId && me.orgCenterIds.includes(data.centerId) ? data.centerId : null,
       active: data.active,
     },
   });
@@ -332,7 +333,9 @@ export async function updateCampaign(
 }
 
 export async function setCampaignActive(id: string, active: boolean) {
-  const me = await requireOrgAdmin();
+  const gate = await authorizeOrg("campaigns:manage");
+  if (!gate.ok) return gate;
+  const me = gate.user;
   const existing = await prisma.campaign.findUnique({ where: { id } });
   if (!existing || existing.organizationId !== me.organizationId) return { ok: false };
   await prisma.campaign.update({ where: { id }, data: { active } });
