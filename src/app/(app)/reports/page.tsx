@@ -17,6 +17,12 @@ const REPORTS: Report[] = [
     description: "Total, count, average, largest gift, contacts logged. Picker for any month.",
   },
   {
+    name: "Year-End Giving",
+    phase: "Start here",
+    href: "/reports/year-end",
+    description: "Total given for the state and for each center, plus a printable giving statement for every donor.",
+  },
+  {
     name: "Giving Breakdown",
     phase: "Online giving",
     href: "/reports/giving",
