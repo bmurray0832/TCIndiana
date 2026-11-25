@@ -1,5 +1,17 @@
 import type { Instrumentation } from "next";
 
+/** Runs once when the server process starts. */
+export async function register() {
+  if (
+    process.env.NEXT_RUNTIME === "nodejs" &&
+    process.env.NODE_ENV === "production" &&
+    process.env.SCHEDULER_DISABLED !== "1"
+  ) {
+    const { startScheduler } = await import("@/lib/scheduler");
+    startScheduler();
+  }
+}
+
 /** Server-side error reporting. Every uncaught error in a request —
  *  server components, server actions, route handlers, middleware —
  *  lands here. We emit one structured JSON line so Railway's log view
