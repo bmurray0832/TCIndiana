@@ -126,6 +126,24 @@ address and replies land in their inbox. Access tokens refresh
 automatically before each send. Without a connection, the composer
 falls back to the shared Resend account.
 
+## Bloomerang sync
+
+Bloomerang stays the system of record for donors and giving. This app
+pulls from it (read-only, never writes back) and adds what Bloomerang
+lacks: prospects and the follow-up layer.
+
+- Set `BLOOMERANG_API_KEY`, then **Settings → Integrations → Sync now**.
+  Pick the center new constituents land in; staff can move people
+  between centers afterwards and the sync will not move them back.
+- `GET /api/cron/bloomerang-sync` (Bearer `CRON_SECRET`) runs the same
+  incremental sync for scheduling; `?full=1` re-reads everything.
+- Constituents with no gifts arrive as prospects. Prospects created in
+  this app have no Bloomerang ID and are never touched by a sync.
+- Mass emails are not logged as contacts, pledges count only when paid,
+  and gifts refunded in Bloomerang are removed here.
+- Code: `src/lib/bloomerang/` (client, mappers, sync) writes through
+  `src/lib/import/apply.ts`, the same engine the CSV wizard uses.
+
 ## Scheduled emails
 
 Two cron jobs (Railway-managed via `railway.toml`):

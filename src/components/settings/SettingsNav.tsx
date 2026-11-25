@@ -17,7 +17,7 @@ const ITEMS: Item[] = [
   { href: "/settings/users", label: "Users", icon: Users, description: "Add staff, change roles, assign center access" },
   { href: "/settings/centers", label: "Centers", icon: Building2, description: "Add centers, set alert thresholds, brand the donation page" },
   { href: "/settings/campaigns", label: "Campaigns", icon: Megaphone, description: "Add funds and campaigns donors can give to" },
-  { href: "/settings/integrations", label: "Email integrations", icon: Mail, description: "Connect Outlook so emails come from your address" },
+  { href: "/settings/integrations", label: "Integrations", icon: Mail, description: "Sync donors from Bloomerang, connect Outlook" },
   { href: "/settings/auth", label: "Auth", icon: ShieldCheck, description: "Auth0 sign-in (Phase 0.5)", disabled: true },
 ];
 

@@ -12,6 +12,7 @@
  *  unavailable" screen rather than silently logging anyone in.
  */
 
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { getAuth0Client, isAuth0Configured } from "@/lib/auth0";
 
@@ -46,7 +47,11 @@ async function getDevUser(): Promise<SessionUser | null> {
   };
 }
 
-export async function getCurrentUser(): Promise<SessionUser | null> {
+/** Memoized per request: a page render asks for the current user many
+ *  times (layout, scope, every query) and each ask used to hit the DB. */
+export const getCurrentUser = cache(loadCurrentUser);
+
+async function loadCurrentUser(): Promise<SessionUser | null> {
   if (!isAuth0Configured()) {
     if (process.env.NODE_ENV === "production") return null;
     return getDevUser();
@@ -67,10 +72,13 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     include: { centerRoles: true },
   });
 
-  // First-time login: match the seeded User by email and stamp the
+  // First-time login: match the provisioned User by email and stamp the
   // auth0Sub onto it. We never auto-create users — admins provision
-  // them in Settings (Phase 2.5) or via the seed script.
-  if (!user && email) {
+  // them in Settings. Two guards against account takeover:
+  //  - the identity provider must vouch for the email (email_verified),
+  //  - a User already bound to a different Auth0 identity is never
+  //    handed to a second one. An admin must clear the link first.
+  if (!user && email && session.user.email_verified === true) {
     const byEmail = await prisma.user.findUnique({
       where: { email },
       include: { centerRoles: true },
@@ -81,12 +89,11 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
         data: { auth0Sub },
         include: { centerRoles: true },
       });
-    } else if (byEmail) {
-      user = byEmail;
     }
   }
 
-  if (!user) return null;
+  // Deactivated users keep their row (history) but lose access.
+  if (!user || !user.active) return null;
   return {
     id: user.id,
     email: user.email,

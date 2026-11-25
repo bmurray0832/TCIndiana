@@ -26,6 +26,11 @@ model Organization {
 
   centers   Center[]
   users     User[]
+  // Direct Bloomerang API sync. New constituents land in the default
+  // center; lastSyncAt is the cursor for incremental runs.
+  bloomerangDefaultCenterId String?   @map("bloomerang_default_center_id")
+  bloomerangLastSyncAt      DateTime? @map("bloomerang_last_sync_at")
+
   campaigns Campaign[]
   auditLog  AuditLog[]
   imports   BloomerangImport[]

@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { isMsGraphConfigured, type MsGraphTokens } from "@/lib/microsoft-graph";
 import { disconnectOutlook } from "@/lib/actions/integrations";
+import { isBloomerangConfigured } from "@/lib/bloomerang/client";
+import { BloomerangSyncCard } from "@/components/settings/BloomerangSyncCard";
 
 export const dynamic = "force-dynamic";
 
@@ -21,12 +23,33 @@ export default async function IntegrationsPage({
   const outlookConnected = !!tokens?.accessToken;
   const outlookConfigured = isMsGraphConfigured();
 
+  const org =
+    me.orgRole === "ORG_ADMIN"
+      ? await prisma.organization.findUnique({
+          where: { id: me.organizationId },
+          select: {
+            bloomerangDefaultCenterId: true,
+            bloomerangLastSyncAt: true,
+            centers: { select: { id: true, name: true }, orderBy: { name: "asc" } },
+          },
+        })
+      : null;
+
   return (
     <>
       <PageHeader
-        title="Email integrations"
-        subtitle="Connect your work mailbox so emails sent from the CRM come from your address and replies land in your inbox."
+        title="Integrations"
+        subtitle="Keep donor data flowing in from Bloomerang, and connect your work mailbox so emails come from your address."
       />
+
+      {org && (
+        <BloomerangSyncCard
+          configured={isBloomerangConfigured()}
+          centers={org.centers}
+          defaultCenterId={org.bloomerangDefaultCenterId}
+          lastSyncAt={org.bloomerangLastSyncAt?.toISOString() ?? null}
+        />
+      )}
 
       {sp.connected === "outlook" && (
         <div className="mb-4 flex items-start gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-900 dark:border-green-900/40 dark:bg-green-950/40 dark:text-green-200">

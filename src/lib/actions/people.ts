@@ -106,6 +106,15 @@ export async function updatePerson(
   }
   const data = parsed.data;
 
+  // Moving someone to another center needs write access there too —
+  // the form's centerId is user input, not a trusted value.
+  if (data.centerId !== existing.centerId) {
+    if (!accessibleCenters.includes(data.centerId)) {
+      return { ok: false, error: "You don't have access to that center.", fieldErrors: { centerId: "No access" } };
+    }
+    await requireWriteAccess(data.centerId);
+  }
+
   await prisma.person.update({
     where: { id },
     data: {
