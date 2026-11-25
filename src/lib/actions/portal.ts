@@ -4,36 +4,18 @@ import { z } from "zod";
 import { Resend } from "resend";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { createMagicLinkToken, clearPortalSession } from "@/lib/portal-auth";
+import {
+  clearPortalSession,
+  consumeMagicLinkToken,
+  createMagicLinkToken,
+  magicLinkThrottled,
+  setPortalSession,
+} from "@/lib/portal-auth";
 import { appOrigin } from "@/lib/stripe";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
 });
-
-/** In-memory send throttle: at most one magic link per email per
- *  cooldown window, and a burst cap per hour. Prevents the form being
- *  scripted to spam a donor's inbox through our Resend account. State
- *  is per-instance (fine for a single Railway service); a restart
- *  resets it, which only ever errs toward sending.
- */
-const COOLDOWN_MS = 60_000;
-const HOURLY_CAP = 5;
-const sendLog = new Map<string, number[]>();
-
-function throttled(email: string): boolean {
-  const now = Date.now();
-  const recent = (sendLog.get(email) ?? []).filter((t) => now - t < 60 * 60_000);
-  const blocked =
-    recent.length >= HOURLY_CAP ||
-    (recent.length > 0 && now - recent[recent.length - 1] < COOLDOWN_MS);
-  if (!blocked) {
-    recent.push(now);
-    if (sendLog.size > 10_000) sendLog.clear(); // unbounded-growth guard
-    sendLog.set(email, recent);
-  }
-  return blocked;
-}
 
 export type PortalRequestState =
   | { ok: true; messageSent: boolean; devLink?: string }
@@ -50,18 +32,18 @@ export async function requestPortalLink(
   if (!parsed.success) return { ok: false, error: "Enter a valid email." };
   const email = parsed.data.email.toLowerCase();
 
-  // Same generic response as a real send — a caller can't tell they
-  // were throttled, and can't tell whether the email exists.
-  if (throttled(email)) return { ok: true, messageSent: true };
-
   const person = await prisma.person.findFirst({
-    where: { email, convertedToDonorAt: { not: null } },
+    where: { email: { equals: email, mode: "insensitive" }, convertedToDonorAt: { not: null } },
+    orderBy: { createdAt: "asc" },
   });
   if (!person) {
     return { ok: true, messageSent: false };
   }
+  // Same generic response as a real send — a caller can't tell they
+  // were throttled, and can't tell whether the email exists.
+  if (await magicLinkThrottled(person.id)) return { ok: true, messageSent: true };
 
-  const token = createMagicLinkToken(person.id);
+  const token = await createMagicLinkToken(person.id);
   const link = `${appOrigin()}/portal/verify?token=${encodeURIComponent(token)}`;
 
   const apiKey = process.env.RESEND_API_KEY;
@@ -88,8 +70,24 @@ export async function requestPortalLink(
   }
 
   // Dev fallback: surface the link in the UI so we can click through
-  // without a configured Resend account.
+  // without a configured Resend account. Never in production — the
+  // link is a login for whoever's email was typed.
+  if (process.env.NODE_ENV === "production") {
+    console.error(
+      JSON.stringify({ level: "error", source: "portal", message: "Resend not configured; sign-in link not sent" }),
+    );
+    return { ok: true, messageSent: true };
+  }
   return { ok: true, messageSent: true, devLink: link };
+}
+
+/** The confirm button on the link page. Spends the token (it works
+ *  once) and starts the donor's session. */
+export async function completePortalSignIn(formData: FormData) {
+  const personId = await consumeMagicLinkToken(String(formData.get("token") ?? ""));
+  if (!personId) redirect("/portal/verify?expired=1");
+  await setPortalSession(personId);
+  redirect("/portal");
 }
 
 export async function portalSignOut() {

@@ -98,8 +98,14 @@ When `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are set:
   field, and a "cover the processing fee" toggle
 - Submits to `/api/give/checkout` which creates a Stripe Checkout
   Session (card + ACH) and redirects the donor to Stripe-hosted payment
-- Webhook at `/api/stripe/webhook` handles `checkout.session.completed`
-  (one-time), `invoice.payment_succeeded` (recurring), `charge.refunded`
+- Webhook at `/api/stripe/webhook` (logic in `src/lib/stripe-webhook.ts`).
+  Enable these events on the endpoint: `checkout.session.completed`,
+  `checkout.session.async_payment_succeeded`, `invoice.paid`,
+  `invoice.payment_failed`, `customer.subscription.deleted`,
+  `charge.refunded`, `charge.updated`
+- A gift is recorded only once money is collected (bank payments settle
+  days later), once per payment however often Stripe redelivers, with
+  the processing fee stored for the Giving Breakdown report
 - On success: match Person by email + center → create Donation
   (`source=STRIPE`) → log a Contact (`outcome=MADE_DONATION`) → run
   `recomputePerson()`. Donors created from online gifts get

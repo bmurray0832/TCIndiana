@@ -181,6 +181,8 @@ model Person {
   // subsequent recurring charges can attach to the same Stripe customer.
   stripeCustomerId String? @unique @map("stripe_customer_id")
 
+  portalLoginTokens PortalLoginToken[]
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -319,6 +321,9 @@ model Donation {
   notes         String?
 
   // Phase 3 (Stripe)
+  // The payment intent is the idempotency key: one gift per intent, no
+  // matter how many times Stripe redelivers the event.
+  stripePaymentIntentId String? @unique @map("stripe_payment_intent_id")
   stripeChargeId       String? @unique @map("stripe_charge_id")
   stripeSubscriptionId String? @map("stripe_subscription_id")
   stripeFeesCents      Int?    @map("stripe_fees_cents")
@@ -515,4 +520,21 @@ model BloomerangCenterMap {
 
   @@unique([organizationId, value])
   @@map("bloomerang_center_maps")
+}
+
+// ─── DONOR PORTAL ────────────────────────────────────────────────────
+
+/// One row per emailed sign-in link. A link works once (usedAt) and
+/// only until expiresAt; the rows also rate-limit how many links one
+/// donor can be sent.
+model PortalLoginToken {
+  id        String    @id @default(cuid())
+  personId  String    @map("person_id")
+  person    Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([personId, createdAt])
+  @@map("portal_login_tokens")
 }

@@ -17,6 +17,12 @@ const REPORTS: Report[] = [
     description: "Total, count, average, largest gift, contacts logged. Picker for any month.",
   },
   {
+    name: "Giving Breakdown",
+    phase: "Online giving",
+    href: "/reports/giving",
+    description: "Month by month: total given, online and recurring share, processing fees, and net. Shows the monthly recurring baseline and where gifts came from.",
+  },
+  {
     name: "Campaign Performance",
     phase: "Phase 1.5",
     href: "/reports/campaigns",
