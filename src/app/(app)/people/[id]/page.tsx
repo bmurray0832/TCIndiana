@@ -60,6 +60,11 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
           <Card title="Contact">
             <Field label="Email" value={p.email} />
             <Field label="Phone" value={p.phone} />
+            <Field
+              label="Address"
+              value={[p.street, [p.city, p.state].filter(Boolean).join(", "), p.postalCode].filter(Boolean).join(" · ") || null}
+            />
+            {p.doNotMail && <Field label="Mail" value="Do not mail" />}
             <Field label="Preferred" value={p.preferredContact?.replace("_", "-")} />
           </Card>
 

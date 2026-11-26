@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
-import { Field, TextInput, Textarea, Select, SubmitRow } from "@/components/forms/FormFields";
+import { Checkbox, Field, TextInput, Textarea, Select, SubmitRow } from "@/components/forms/FormFields";
 import { addPerson, updatePerson, type PersonFormState } from "@/lib/actions/people";
 import type { Person } from "@/generated/prisma";
 
@@ -95,6 +95,22 @@ export function PersonForm({
           <TextInput id="phone" name="phone" defaultValue={person?.phone ?? ""} />
         </Field>
       </div>
+
+      <Field label="Street address" htmlFor="street" error={errs.street}>
+        <TextInput id="street" name="street" defaultValue={person?.street ?? ""} autoComplete="off" />
+      </Field>
+      <div className="grid gap-4 md:grid-cols-3">
+        <Field label="City" htmlFor="city" error={errs.city}>
+          <TextInput id="city" name="city" defaultValue={person?.city ?? ""} />
+        </Field>
+        <Field label="State" htmlFor="state" error={errs.state}>
+          <TextInput id="state" name="state" defaultValue={person?.state ?? ""} />
+        </Field>
+        <Field label="ZIP" htmlFor="postalCode" error={errs.postalCode}>
+          <TextInput id="postalCode" name="postalCode" defaultValue={person?.postalCode ?? ""} />
+        </Field>
+      </div>
+      <Checkbox name="doNotMail" defaultChecked={person?.doNotMail ?? false} label="Do not send mail to this person" />
 
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="Center" htmlFor="centerId" required error={errs.centerId}>

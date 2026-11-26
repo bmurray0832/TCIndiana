@@ -66,6 +66,17 @@ export default async function ImportLandingPage() {
         })}
       </section>
 
+      <Link
+        href="/import/donation-sheet"
+        className="mt-3 block rounded-lg border border-border bg-card p-5 transition-colors hover:border-primary/40"
+      >
+        <div className="text-base font-semibold">Import a donation spreadsheet</div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          An Excel file with one tab per month and one row per gift, with no ID columns. Creates or matches donors,
+          saves their addresses, and adds the gifts to one center.
+        </p>
+      </Link>
+
       <section className="mt-8">
         <h2 className="mb-2 text-sm font-semibold">Recent imports</h2>
         {history.length === 0 ? (

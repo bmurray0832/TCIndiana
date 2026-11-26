@@ -148,6 +148,14 @@ model Person {
   phone        String?
   organization String?
 
+  // Mailing address, for statements and receipts.
+  street     String?
+  city       String?
+  state      String?
+  postalCode String? @map("postal_code")
+  // Donor asked not to be sent mail (receipts, statements, appeals).
+  doNotMail  Boolean @default(false) @map("do_not_mail")
+
   preferredContact PreferredContact? @map("preferred_contact")
   source           ProspectSource?
   interestLevel    InterestLevel?    @map("interest_level")  // null after conversion
@@ -331,6 +339,11 @@ model Donation {
 
   // Phase 2 (Bloomerang import)
   bloomerangId String? @unique @map("bloomerang_id")
+
+  // Gifts loaded from a donation spreadsheet have no source ID, so the
+  // importer derives a stable key from the gift itself. Re-uploading the
+  // same file finds the same keys and adds nothing.
+  importKey String? @unique @map("import_key")
 
   contact Contact?
 
