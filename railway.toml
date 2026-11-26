@@ -1,7 +1,9 @@
 [deploy]
 healthcheckPath = "/login"
-# Apply pending Prisma migrations before each deploy goes live.
-preDeployCommand = "npx prisma migrate deploy"
+# Before each deploy goes live: apply pending migrations, then make sure
+# the organization, centers and first admin exist (scripts/bootstrap.mjs,
+# a no-op unless BOOTSTRAP_ADMIN_EMAIL is set).
+preDeployCommand = "npx prisma migrate deploy && node scripts/bootstrap.mjs"
 
 # Scheduled jobs (weekly digest, monthly lapsed-donor list, nightly
 # Bloomerang sync) run inside the app: see src/lib/scheduler.ts.
