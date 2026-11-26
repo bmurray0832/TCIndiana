@@ -105,3 +105,14 @@ In rough order:
   person has new activity, so they go stale on January 1.
 - Not ported from Holy Insights: per-user page toggles.
 - Remaining dependency advisories need a major Prisma upgrade.
+
+## Donation spreadsheet import
+
+- Gifts loaded from a spreadsheet carry no Bloomerang IDs. When the
+  direct Bloomerang sync is switched on, it will not recognise them and
+  would load the same gifts and donors a second time. Before the first
+  sync, either clear the spreadsheet-loaded data for that center or add
+  matching of existing people by email/name to the sync.
+- Names arrive as one cell. The importer guesses first/last name and
+  which names are organizations; staff can correct any of them on the
+  profile.

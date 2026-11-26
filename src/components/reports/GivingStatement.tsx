@@ -34,7 +34,11 @@ export function GivingStatement({
 
       <div className="mt-5">
         <div className="font-medium">{s.name}</div>
+        {s.address.map((line) => (
+          <div key={line}>{line}</div>
+        ))}
         {s.email && <div className="text-muted-foreground">{s.email}</div>}
+        {s.doNotMail && <div className="text-xs font-medium text-red-700 print:hidden">Do not mail</div>}
       </div>
 
       <p className="mt-5">

@@ -56,6 +56,9 @@ export type Statement = {
   personId: string;
   name: string;
   email: string | null;
+  /** Mailing address lines; empty when none is on file. */
+  address: string[];
+  doNotMail: boolean;
   centerName: string;
   centerAddress: string | null;
   gifts: StatementGift[];
@@ -85,6 +88,11 @@ export async function yearEndStatements(
           firstName: true,
           lastName: true,
           email: true,
+          street: true,
+          city: true,
+          state: true,
+          postalCode: true,
+          doNotMail: true,
           center: { select: { name: true, address: true } },
         },
       },
@@ -100,6 +108,10 @@ export async function yearEndStatements(
         personId: p.id,
         name: `${p.firstName} ${p.lastName}`.trim(),
         email: p.email,
+        address: [p.street, [[p.city, p.state].filter(Boolean).join(", "), p.postalCode].filter(Boolean).join(" ")].filter(
+          (line): line is string => !!line,
+        ),
+        doNotMail: p.doNotMail,
         centerName: p.center.name,
         centerAddress: p.center.address,
         gifts: [],
