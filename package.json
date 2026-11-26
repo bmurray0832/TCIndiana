@@ -12,7 +12,7 @@
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:seed": "tsx prisma/seed.ts",
-    "db:bootstrap": "tsx scripts/bootstrap-prod.ts",
+    "db:bootstrap": "node scripts/bootstrap.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {
